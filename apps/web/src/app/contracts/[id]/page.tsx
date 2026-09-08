@@ -468,9 +468,15 @@ export default function ContractWorkspacePage() {
   const handleOpenSubmitModal = (milestoneId?: string) => {
     if (milestoneId) {
       setSelectedMilestoneId(milestoneId);
-    } else if (workspace?.milestones) {
-      const active = workspace.milestones.find((m) => m.status === "PENDING" || m.status === "IN_PROGRESS");
-      if (active) setSelectedMilestoneId(active.id);
+    } else if (workspace?.milestones && workspace.milestones.length > 0) {
+      const active = workspace.milestones.find(
+        (m) => m.status === "PENDING" || m.status === "IN_PROGRESS" || m.status === "REJECTED"
+      );
+      if (active) {
+        setSelectedMilestoneId(active.id);
+      } else {
+        setSelectedMilestoneId(workspace.milestones[0].id);
+      }
     }
     setSubmitModalOpen(true);
   };
@@ -479,6 +485,14 @@ export default function ContractWorkspacePage() {
     e.preventDefault();
     if (!selectedMilestoneId) {
       setStatusFeedback({ type: "error", text: "Please select a milestone to submit." });
+      return;
+    }
+
+    if (!deliverableNotes.trim() && !workUrl.trim() && deliverableFiles.length === 0) {
+      setStatusFeedback({
+        type: "error",
+        text: "Please provide a work description, a live preview link, or attach deliverable files.",
+      });
       return;
     }
 
@@ -972,17 +986,20 @@ export default function ContractWorkspacePage() {
 
                     <div className="flex items-center gap-2">
                       {/* Freelancer Submit Deliverable Button */}
-                      {isFreelancer && (milestone.status === "PENDING" || milestone.status === "IN_PROGRESS") && (
-                        <Button
-                          size="sm"
-                          disabled={actionLoading}
-                          onClick={() => handleOpenSubmitModal(milestone.id)}
-                          className="gap-1.5 font-bold text-xs bg-brand-600 hover:bg-brand-700 text-white shadow-sm"
-                        >
-                          <UploadCloud className="h-3.5 w-3.5" />
-                          Submit Deliverable
-                        </Button>
-                      )}
+                      {isFreelancer &&
+                        (milestone.status === "PENDING" ||
+                          milestone.status === "IN_PROGRESS" ||
+                          milestone.status === "REJECTED") && (
+                          <Button
+                            size="sm"
+                            disabled={actionLoading}
+                            onClick={() => handleOpenSubmitModal(milestone.id)}
+                            className="gap-1.5 font-bold text-xs bg-brand-600 hover:bg-brand-700 text-white shadow-sm"
+                          >
+                            <UploadCloud className="h-3.5 w-3.5" />
+                            Submit Deliverable
+                          </Button>
+                        )}
 
                       {/* Client Actions */}
                       {isClient && (
@@ -1442,7 +1459,7 @@ export default function ContractWorkspacePage() {
 
             <form onSubmit={handleSubmitDeliverable} className="space-y-4">
               {/* Milestone Target Selector */}
-              {workspace.milestones.length > 1 && (
+              {workspace.milestones.length > 1 ? (
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                     Select Milestone
@@ -1459,16 +1476,27 @@ export default function ContractWorkspacePage() {
                     ))}
                   </select>
                 </div>
+              ) : (
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between">
+                  <div className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                    Milestone: <span className="font-bold text-slate-900 dark:text-white">{workspace.milestones[0]?.title}</span>
+                  </div>
+                  <span className="text-xs font-bold text-brand-600 dark:text-brand-400">
+                    ${workspace.milestones[0]?.amount.toLocaleString()}
+                  </span>
+                </div>
               )}
 
               {/* Work Notes / Summary */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Deliverable Summary &amp; Work Description <span className="text-rose-500">*</span>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                  <span>Deliverable Summary &amp; Work Description</span>
+                  <span className="text-[10px] text-slate-400 font-normal">
+                    {deliverableFiles.length > 0 || workUrl.trim() ? "Optional" : "Required if no file/link"}
+                  </span>
                 </label>
                 <textarea
                   rows={4}
-                  required
                   placeholder="Summarize the completed work, test credentials, instructions for testing, or package overview..."
                   value={deliverableNotes}
                   onChange={(e) => setDeliverableNotes(e.target.value)}

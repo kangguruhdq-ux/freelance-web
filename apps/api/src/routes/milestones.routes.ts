@@ -3,6 +3,7 @@ import prisma from "../lib/prisma";
 import { authenticate } from "../middleware/auth.middleware";
 import { MilestoneStatus } from "@prisma/client";
 import { createNotification } from "./notifications.routes";
+import { encodeDbText, decodeDbText } from "../lib/db-safe";
 
 const router = Router();
 
@@ -91,8 +92,8 @@ router.post("/:id/submit", authenticate, async (req: Request, res: Response): Pr
     let combinedDesc = cleanNotes;
     if (cleanUrl) {
       combinedDesc = combinedDesc
-        ? `${combinedDesc}\n\n🔗 Work URL: ${cleanUrl}`
-        : `🔗 Work URL: ${cleanUrl}`;
+        ? `${combinedDesc}\n\nWork URL: ${cleanUrl}`
+        : `Work URL: ${cleanUrl}`;
     }
 
     const updated = await prisma.milestone.update({
@@ -100,7 +101,7 @@ router.post("/:id/submit", authenticate, async (req: Request, res: Response): Pr
       data: {
         status: "SUBMITTED",
         submittedAt: new Date(),
-        ...(combinedDesc ? { description: combinedDesc } : {}),
+        ...(combinedDesc ? { description: encodeDbText(combinedDesc) } : {}),
       },
     });
 
@@ -109,18 +110,22 @@ router.post("/:id/submit", authenticate, async (req: Request, res: Response): Pr
     if (Array.isArray(files) && files.length > 0) {
       for (const f of files) {
         if (f.fileUrl) {
-          const att = await prisma.attachment.create({
-            data: {
-              fileName: f.fileName || "deliverable-file",
-              fileUrl: f.fileUrl,
-              mimeType: f.mimeType || "application/octet-stream",
-              sizeBytes: Number(f.sizeBytes) || 0,
-              uploaderId: req.user!.id,
-              contractId: milestone.contractId,
-              milestoneId: milestone.id,
-            },
-          });
-          createdAttachments.push(att);
+          try {
+            const att = await prisma.attachment.create({
+              data: {
+                fileName: encodeDbText(f.fileName || "deliverable-file"),
+                fileUrl: f.fileUrl,
+                mimeType: f.mimeType || "application/octet-stream",
+                sizeBytes: Math.min(Math.floor(Math.abs(Number(f.sizeBytes) || 0)), 2147483647),
+                uploaderId: req.user!.id,
+                contractId: milestone.contractId,
+                milestoneId: milestone.id,
+              },
+            });
+            createdAttachments.push(att);
+          } catch (attErr) {
+            console.error("Failed to persist milestone attachment:", attErr);
+          }
         }
       }
     }
@@ -139,30 +144,17 @@ router.post("/:id/submit", authenticate, async (req: Request, res: Response): Pr
           },
         });
         if (shared) {
-          const noteText = cleanNotes ? `\n\n📝 Notes: ${cleanNotes}` : "";
-          const urlText = cleanUrl ? `\n🔗 Link: ${cleanUrl}` : "";
+          const noteText = cleanNotes ? `\n\nNotes: ${cleanNotes}` : "";
+          const urlText = cleanUrl ? `\nLink: ${cleanUrl}` : "";
           const fileText =
             createdAttachments.length > 0
-              ? `\n📎 Files: ${createdAttachments.length} deliverable file(s) attached`
+              ? `\nFiles: ${createdAttachments.length} deliverable file(s) attached`
               : "";
           await prisma.message.create({
             data: {
               conversationId: shared.conversationId,
               senderId: req.user!.id,
-              content: `🚀 Deliverable submitted for "${milestone.title}"!${noteText}${urlText}${fileText}`,
-              attachments:
-                createdAttachments.length > 0
-                  ? {
-                      create: createdAttachments.map((att) => ({
-                        fileName: att.fileName,
-                        fileUrl: att.fileUrl,
-                        mimeType: att.mimeType,
-                        sizeBytes: att.sizeBytes,
-                        uploaderId: req.user!.id,
-                        contractId: milestone.contractId,
-                      })),
-                    }
-                  : undefined,
+              content: encodeDbText(`Deliverable submitted for "${milestone.title}"!${noteText}${urlText}${fileText}`),
             },
           });
         }
@@ -188,13 +180,16 @@ router.post("/:id/submit", authenticate, async (req: Request, res: Response): Pr
         id: updated.id,
         status: updated.status,
         submittedAt: updated.submittedAt,
-        description: updated.description,
-        attachments: createdAttachments,
+        description: decodeDbText(updated.description),
+        attachments: createdAttachments.map((att) => ({
+          ...att,
+          fileName: decodeDbText(att.fileName),
+        })),
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Submit milestone error:", error);
-    res.status(500).json({ success: false, error: "Failed to submit milestone" });
+    res.status(500).json({ success: false, error: error?.message || "Failed to submit milestone" });
   }
 });
 

@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import prisma from "../lib/prisma";
 import { authenticate } from "../middleware/auth.middleware";
 import { createNotification } from "./notifications.routes";
+import { encodeDbText, decodeDbText } from "../lib/db-safe";
 
 const router = Router({ mergeParams: true });
 
@@ -147,7 +148,7 @@ router.get("/:id/messages", authenticate, async (req: Request, res: Response): P
       const isEdited = !isDeleted && (m.updatedAt.getTime() - m.createdAt.getTime() > 1000);
       return {
         id: m.id,
-        content: m.content,
+        content: decodeDbText(m.content),
         senderId: m.senderId,
         senderName: m.sender.name,
         senderAvatar: m.sender.avatarUrl,
@@ -157,7 +158,12 @@ router.get("/:id/messages", authenticate, async (req: Request, res: Response): P
         isEdited,
         createdAt: m.createdAt.toISOString(),
         updatedAt: m.updatedAt.toISOString(),
-        attachments: isDeleted ? [] : m.attachments,
+        attachments: isDeleted
+          ? []
+          : m.attachments.map((att) => ({
+              ...att,
+              fileName: decodeDbText(att.fileName),
+            })),
       };
     });
 
@@ -239,14 +245,14 @@ router.post("/:id/messages", authenticate, async (req: Request, res: Response): 
       data: {
         conversationId,
         senderId: userId,
-        content: (content || "").trim(),
+        content: encodeDbText((content || "").trim()),
         attachments: hasAttachments
           ? {
               create: attachments.map((att: any) => ({
-                fileName: att.fileName || "attachment",
+                fileName: encodeDbText(att.fileName || "attachment"),
                 fileUrl: att.fileUrl,
                 mimeType: att.mimeType || "application/octet-stream",
-                sizeBytes: Number(att.sizeBytes) || 0,
+                sizeBytes: Math.min(Math.floor(Math.abs(Number(att.sizeBytes) || 0)), 2147483647),
                 uploaderId: userId,
                 contractId: contract.id,
               })),
@@ -277,7 +283,7 @@ router.post("/:id/messages", authenticate, async (req: Request, res: Response): 
       userId: recipientId,
       type: "NEW_MESSAGE",
       title: `New message from ${req.user!.name}`,
-      message: notifText,
+      message: encodeDbText(notifText),
       linkUrl: `/contracts/${contract.id}`,
       metadata: { contractId: contract.id, messageId: message.id },
     });
@@ -286,7 +292,7 @@ router.post("/:id/messages", authenticate, async (req: Request, res: Response): 
       success: true,
       message: {
         id: message.id,
-        content: message.content,
+        content: decodeDbText(message.content),
         senderId: message.senderId,
         senderName: message.sender.name,
         senderAvatar: message.sender.avatarUrl,
@@ -296,7 +302,10 @@ router.post("/:id/messages", authenticate, async (req: Request, res: Response): 
         isEdited: false,
         createdAt: message.createdAt.toISOString(),
         updatedAt: message.updatedAt.toISOString(),
-        attachments: message.attachments,
+        attachments: message.attachments.map((att) => ({
+          ...att,
+          fileName: decodeDbText(att.fileName),
+        })),
       },
     });
   } catch (error) {
@@ -339,7 +348,7 @@ router.put("/:id/messages/:messageId", authenticate, async (req: Request, res: R
     const updated = await prisma.message.update({
       where: { id: messageId },
       data: {
-        content: content.trim(),
+        content: encodeDbText(content.trim()),
         updatedAt: new Date(),
       },
       include: {
@@ -356,7 +365,7 @@ router.put("/:id/messages/:messageId", authenticate, async (req: Request, res: R
       success: true,
       message: {
         id: updated.id,
-        content: updated.content,
+        content: decodeDbText(updated.content),
         senderId: updated.senderId,
         senderName: updated.sender.name,
         senderAvatar: updated.sender.avatarUrl,
@@ -366,7 +375,10 @@ router.put("/:id/messages/:messageId", authenticate, async (req: Request, res: R
         isEdited: true,
         createdAt: updated.createdAt.toISOString(),
         updatedAt: updated.updatedAt.toISOString(),
-        attachments: updated.attachments,
+        attachments: updated.attachments.map((att) => ({
+          ...att,
+          fileName: decodeDbText(att.fileName),
+        })),
       },
     });
   } catch (error) {

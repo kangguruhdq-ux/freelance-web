@@ -56,15 +56,20 @@ export function FileAttachmentUpload({
       return;
     }
 
-    const newAttachments: AttachedFile[] = [];
-
-    Array.from(files).forEach((file) => {
+    const validFiles = Array.from(files).filter((file) => {
       if (file.size > maxSizeBytes) {
         setError(`"${file.name}" exceeds the maximum allowed size (${formatFileSize(maxSizeBytes)}).`);
-        return;
+        return false;
       }
+      return true;
+    });
 
-      // Read as base64 Data URL for persistent storage in database
+    if (validFiles.length === 0) return;
+
+    let processedCount = 0;
+    const newAttachments: AttachedFile[] = [];
+
+    validFiles.forEach((file) => {
       const reader = new FileReader();
       reader.onload = () => {
         const fileUrl = (reader.result as string) || URL.createObjectURL(file);
@@ -75,7 +80,14 @@ export function FileAttachmentUpload({
           sizeBytes: file.size,
         });
 
-        if (newAttachments.length === files.length) {
+        processedCount++;
+        if (processedCount === validFiles.length) {
+          onChange([...attachments, ...newAttachments]);
+        }
+      };
+      reader.onerror = () => {
+        processedCount++;
+        if (processedCount === validFiles.length && newAttachments.length > 0) {
           onChange([...attachments, ...newAttachments]);
         }
       };
