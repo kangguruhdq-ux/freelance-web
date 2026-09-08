@@ -12,6 +12,7 @@ import {
   DollarSign,
   Clock,
   Briefcase,
+  Paperclip,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,13 @@ interface ProposalItem {
     status: string;
     client: { id: string; name: string; email: string };
   };
+  attachments?: Array<{
+    id: string;
+    fileName: string;
+    fileUrl: string;
+    mimeType: string;
+    sizeBytes: number;
+  }>;
   createdAt: string;
 }
 
@@ -385,6 +393,30 @@ export default function AdminProposalsPage() {
                 {selectedProposal.coverLetter}
               </p>
             </div>
+
+            {selectedProposal.attachments && selectedProposal.attachments.length > 0 && (
+              <div>
+                <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center gap-1.5">
+                  <Paperclip className="h-3.5 w-3.5 text-brand-600" />
+                  Attached Work Samples ({selectedProposal.attachments.length})
+                </h3>
+                <div className="space-y-1.5">
+                  {selectedProposal.attachments.map((att) => (
+                    <a
+                      key={att.id}
+                      href={att.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download={att.fileName}
+                      className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 transition-colors"
+                    >
+                      <span className="font-medium truncate max-w-xs">{att.fileName}</span>
+                      <span className="text-[10px] text-brand-600 dark:text-brand-400 font-semibold shrink-0">Download</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="pt-3 flex justify-end border-t border-slate-100 dark:border-slate-800">
               <Button

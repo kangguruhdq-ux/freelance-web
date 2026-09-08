@@ -98,7 +98,7 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
             <Link
               href="/#freelancers"
               onClick={onClose}
-              className="flex items-center gap-3 px-3 py-3 rounded-lg text-base font-medium text-slate-700 hover:text-brand-600 hover:bg-brand-50/50 transition-colors"
+              className="flex items-center gap-3 px-3 py-3 rounded-lg text-base font-medium text-slate-700 dark:text-slate-200 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50/50 dark:hover:bg-slate-800 transition-colors"
             >
               <Users className="h-5 w-5 text-slate-400" />
               Find Talent
@@ -106,7 +106,7 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
             <Link
               href="/#how-it-works"
               onClick={onClose}
-              className="flex items-center gap-3 px-3 py-3 rounded-lg text-base font-medium text-slate-700 hover:text-brand-600 hover:bg-brand-50/50 transition-colors"
+              className="flex items-center gap-3 px-3 py-3 rounded-lg text-base font-medium text-slate-700 dark:text-slate-200 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50/50 dark:hover:bg-slate-800 transition-colors"
             >
               <Sparkles className="h-5 w-5 text-slate-400" />
               How It Works
@@ -114,7 +114,7 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
             <Link
               href="/#security"
               onClick={onClose}
-              className="flex items-center gap-3 px-3 py-3 rounded-lg text-base font-medium text-slate-700 hover:text-brand-600 hover:bg-brand-50/50 transition-colors"
+              className="flex items-center gap-3 px-3 py-3 rounded-lg text-base font-medium text-slate-700 dark:text-slate-200 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50/50 dark:hover:bg-slate-800 transition-colors"
             >
               <Shield className="h-5 w-5 text-slate-400" />
               Escrow & Security

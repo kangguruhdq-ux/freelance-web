@@ -83,7 +83,7 @@ export default function ClientDashboardPage() {
 
         {/* Client KPI Metrics */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-card">
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-card dark:shadow-none hover:-translate-y-1 hover:shadow-card-hover dark:hover:shadow-glow-brand/5 transition-all duration-300">
             <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
               <span className="text-xs font-semibold uppercase tracking-wider">Active Contracts</span>
               <Briefcase className="h-4 w-4 text-brand-600" />
@@ -92,7 +92,7 @@ export default function ClientDashboardPage() {
             <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">Live in workspace</p>
           </div>
 
-          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-card">
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-card dark:shadow-none hover:-translate-y-1 hover:shadow-card-hover dark:hover:shadow-glow-brand/5 transition-all duration-300">
             <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
               <span className="text-xs font-semibold uppercase tracking-wider">Total Contracts</span>
               <FileText className="h-4 w-4 text-indigo-600" />
@@ -101,7 +101,7 @@ export default function ClientDashboardPage() {
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">With vetted specialists</p>
           </div>
 
-          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-card">
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-card dark:shadow-none hover:-translate-y-1 hover:shadow-card-hover dark:hover:shadow-glow-brand/5 transition-all duration-300">
             <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
               <span className="text-xs font-semibold uppercase tracking-wider">Milestones Completed</span>
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
@@ -112,7 +112,7 @@ export default function ClientDashboardPage() {
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Approved &amp; released</p>
           </div>
 
-          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-card">
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-card dark:shadow-none hover:-translate-y-1 hover:shadow-card-hover dark:hover:shadow-glow-brand/5 transition-all duration-300">
             <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
               <span className="text-xs font-semibold uppercase tracking-wider">Total Invested</span>
               <DollarSign className="h-4 w-4 text-amber-600" />
@@ -149,7 +149,7 @@ export default function ClientDashboardPage() {
               {contracts.map((c) => (
                 <Card
                   key={c.id}
-                  className="p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-card flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  className="p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-card dark:shadow-none hover:-translate-y-0.5 hover:shadow-card-hover dark:hover:shadow-glow-brand/5 hover:border-brand-300 dark:hover:border-brand-700/60 transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">

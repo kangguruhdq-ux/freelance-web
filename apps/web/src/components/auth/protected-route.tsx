@@ -40,13 +40,13 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   if (allowedRoles && role && !allowedRoles.includes(role)) {
     return (
       <div className="min-h-[65vh] flex items-center justify-center px-4 py-12">
-        <div className="max-w-md w-full text-center p-8 bg-white border border-slate-200/90 rounded-2xl shadow-card">
-          <div className="h-12 w-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4">
+        <div className="max-w-md w-full text-center p-8 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-card dark:shadow-none">
+          <div className="h-12 w-12 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 flex items-center justify-center mx-auto mb-4">
             <ShieldAlert className="h-6 w-6" />
           </div>
-          <h2 className="text-xl font-bold text-slate-900">Access Restricted</h2>
-          <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-            Your account role (<span className="font-semibold text-slate-800">{role}</span>) does not have permission to view this section.
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Access Restricted</h2>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+            Your account role (<span className="font-semibold text-slate-800 dark:text-slate-200">{role}</span>) does not have permission to view this section.
           </p>
           <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
             <Button

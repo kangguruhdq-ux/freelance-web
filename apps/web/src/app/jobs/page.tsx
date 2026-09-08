@@ -138,13 +138,13 @@ function JobsListContent() {
               <p className="text-sm text-slate-500 font-medium">Loading active marketplace jobs...</p>
             </div>
           ) : jobs.length === 0 ? (
-            <Card className="p-12 text-center space-y-4 border-slate-200 bg-white">
-              <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+            <Card className="p-12 text-center space-y-4 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
                 <Filter className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">No jobs match your search filters</h3>
-                <p className="text-xs text-slate-500 mt-1">Try broadening your search criteria or resetting filters.</p>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">No jobs match your search filters</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Try broadening your search criteria or resetting filters.</p>
               </div>
               <Button variant="outline" size="sm" onClick={() => { setSearch(""); setSelectedCategory("ALL"); setExperience("ALL"); }}>
                 Clear Filters
@@ -154,7 +154,7 @@ function JobsListContent() {
             jobs.map((job) => (
               <Card
                 key={job.id}
-                className="p-6 transition-all duration-200 hover:shadow-card-hover border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 group"
+                className="p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-card-hover dark:hover:shadow-glow-brand/5 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 group"
               >
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                   <div className="space-y-2 flex-1">

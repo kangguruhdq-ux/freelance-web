@@ -8,7 +8,7 @@ const router = Router();
 // POST /proposals — Submit proposal (FREELANCER only)
 router.post("/", authenticate, requireRole("FREELANCER"), async (req: Request, res: Response): Promise<void> => {
   try {
-    const { jobId, coverLetter, bidAmount, estimatedDays } = req.body;
+    const { jobId, coverLetter, bidAmount, estimatedDays, attachments } = req.body;
 
     if (!jobId) {
       res.status(400).json({ success: false, error: "Job ID is required." });
@@ -74,6 +74,22 @@ router.post("/", authenticate, requireRole("FREELANCER"), async (req: Request, r
           bidAmount: numericBid,
           estimatedDays: days,
           status: "PENDING",
+          ...(Array.isArray(attachments) && attachments.length > 0
+            ? {
+                attachments: {
+                  create: attachments.map((att: any) => ({
+                    fileName: String(att.fileName || "attachment"),
+                    fileUrl: String(att.fileUrl || ""),
+                    mimeType: String(att.mimeType || "application/octet-stream"),
+                    sizeBytes: Number(att.sizeBytes || 0),
+                    uploaderId: freelancerId,
+                  })),
+                },
+              }
+            : {}),
+        },
+        include: {
+          attachments: true,
         },
       }),
       prisma.job.update({
@@ -91,6 +107,7 @@ router.post("/", authenticate, requireRole("FREELANCER"), async (req: Request, r
         bidAmount: Number(proposal.bidAmount),
         estimatedDays: proposal.estimatedDays,
         status: proposal.status,
+        attachments: proposal.attachments || [],
       },
     });
   } catch (error: any) {
@@ -118,6 +135,7 @@ router.get("/me", authenticate, requireRole("FREELANCER"), async (req: Request, 
             client: { select: { id: true, name: true } },
           },
         },
+        attachments: true,
       },
     });
 
@@ -133,6 +151,13 @@ router.get("/me", authenticate, requireRole("FREELANCER"), async (req: Request, 
       coverLetter: p.coverLetter,
       status: p.status,
       createdAt: p.createdAt.toISOString(),
+      attachments: p.attachments.map((a) => ({
+        id: a.id,
+        fileName: a.fileName,
+        fileUrl: a.fileUrl,
+        mimeType: a.mimeType,
+        sizeBytes: a.sizeBytes,
+      })),
     }));
 
     res.status(200).json({
@@ -168,6 +193,7 @@ router.get("/:id", authenticate, async (req: Request, res: Response): Promise<vo
             avatarUrl: true,
           },
         },
+        attachments: true,
       },
     });
 
@@ -199,6 +225,13 @@ router.get("/:id", authenticate, async (req: Request, res: Response): Promise<vo
         status: proposal.status,
         freelancer: proposal.freelancer,
         createdAt: proposal.createdAt.toISOString(),
+        attachments: proposal.attachments.map((a) => ({
+          id: a.id,
+          fileName: a.fileName,
+          fileUrl: a.fileUrl,
+          mimeType: a.mimeType,
+          sizeBytes: a.sizeBytes,
+        })),
       },
     });
   } catch (error) {

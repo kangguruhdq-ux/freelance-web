@@ -8,17 +8,17 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-brand-600 text-white hover:bg-brand-700 shadow-sm hover:shadow",
+          "bg-brand-600 text-white hover:bg-brand-700 shadow-sm hover:shadow dark:bg-brand-600 dark:hover:bg-brand-500",
         secondary:
-          "bg-slate-100 text-slate-900 hover:bg-slate-200 shadow-sm",
+          "bg-slate-100 text-slate-900 hover:bg-slate-200 shadow-sm dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700",
         outline:
-          "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 hover:border-slate-300 shadow-subtle",
+          "border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-subtle dark:shadow-none",
         ghost:
-          "text-slate-700 hover:bg-slate-100 hover:text-slate-900",
+          "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100",
         destructive:
-          "bg-rose-600 text-white hover:bg-rose-700 shadow-sm",
+          "bg-rose-600 text-white hover:bg-rose-700 shadow-sm dark:bg-rose-600 dark:hover:bg-rose-500",
         link:
-          "text-brand-600 underline-offset-4 hover:underline p-0 h-auto font-medium",
+          "text-brand-600 dark:text-brand-400 underline-offset-4 hover:underline p-0 h-auto font-medium",
       },
       size: {
         default: "h-10 px-4 py-2",

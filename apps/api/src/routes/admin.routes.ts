@@ -742,6 +742,7 @@ router.get("/proposals", async (req: Request, res: Response): Promise<void> => {
               client: { select: { id: true, name: true, email: true } },
             },
           },
+          attachments: true,
         },
       }),
     ]);
@@ -762,6 +763,13 @@ router.get("/proposals", async (req: Request, res: Response): Promise<void> => {
           status: p.job.status,
           client: p.job.client,
         },
+        attachments: p.attachments.map((a) => ({
+          id: a.id,
+          fileName: a.fileName,
+          fileUrl: a.fileUrl,
+          mimeType: a.mimeType,
+          sizeBytes: a.sizeBytes,
+        })),
         createdAt: p.createdAt.toISOString(),
       })),
       pagination: { total, page: pageNum, limit: take, totalPages: Math.ceil(total / take) },

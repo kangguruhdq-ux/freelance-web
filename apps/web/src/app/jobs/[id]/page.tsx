@@ -15,12 +15,15 @@ import {
   CheckCircle,
   FileText,
   Clock,
+  Paperclip,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api-client";
+import { FileAttachmentUpload, AttachedFile, getFileIcon, formatFileSize } from "@/components/ui/file-attachment-upload";
 
 interface JobDetail {
   id: string;
@@ -47,6 +50,7 @@ interface JobDetail {
 
 interface ProposalItem {
   id: string;
+  jobId: string;
   coverLetter: string;
   bidAmount: number;
   estimatedDays: number;
@@ -60,6 +64,13 @@ interface ProposalItem {
     rating: number;
     completedJobs: number;
   };
+  attachments?: Array<{
+    id: string;
+    fileName: string;
+    fileUrl: string;
+    mimeType: string;
+    sizeBytes: number;
+  }>;
 }
 
 export default function JobDetailPage() {
@@ -76,6 +87,7 @@ export default function JobDetailPage() {
   const [bidAmount, setBidAmount] = React.useState<string>("");
   const [estimatedDays, setEstimatedDays] = React.useState<string>("7");
   const [coverLetter, setCoverLetter] = React.useState<string>("");
+  const [attachments, setAttachments] = React.useState<AttachedFile[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
   const [proposalSuccess, setProposalSuccess] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState("");
@@ -131,6 +143,7 @@ export default function JobDetailPage() {
           bidAmount: parseFloat(bidAmount),
           estimatedDays: parseInt(estimatedDays, 10),
           coverLetter,
+          attachments,
         }),
       });
 
@@ -140,6 +153,7 @@ export default function JobDetailPage() {
       }
 
       setProposalSuccess(true);
+      setAttachments([]);
     } catch (err: any) {
       setErrorMsg(err.message || "Network error submitting proposal");
     } finally {
@@ -260,22 +274,22 @@ export default function JobDetailPage() {
         {isClientOwner && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-slate-900">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                 Proposals Received ({proposals.length})
               </h2>
             </div>
 
             {proposals.length === 0 ? (
-              <Card className="p-8 text-center bg-white border-slate-200">
-                <FileText className="h-8 w-8 text-slate-400 mx-auto mb-2" />
-                <p className="text-sm font-semibold text-slate-700">No proposals submitted yet</p>
-                <p className="text-xs text-slate-400 mt-1">
+              <Card className="p-8 text-center bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                <FileText className="h-8 w-8 text-slate-400 dark:text-slate-500 mx-auto mb-2" />
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">No proposals submitted yet</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                   Top freelancers will submit bids soon. You will receive notifications when proposals arrive.
                 </p>
               </Card>
             ) : (
               proposals.map((p) => (
-                <Card key={p.id} className="p-6 bg-white border-slate-200 shadow-card space-y-4">
+                <Card key={p.id} className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-card dark:shadow-none space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-sm uppercase">
@@ -283,26 +297,52 @@ export default function JobDetailPage() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <Link href={`/freelancers/${p.freelancer.id}`} className="font-bold text-slate-900 hover:text-brand-600 transition-colors">
+                          <Link href={`/freelancers/${p.freelancer.id}`} className="font-bold text-slate-900 dark:text-white hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
                             {p.freelancer.name}
                           </Link>
                           <Badge variant="outline" className="text-[10px] font-bold">
                             {p.status}
                           </Badge>
                         </div>
-                        <p className="text-xs text-slate-500">{p.freelancer.headline || "Independent Specialist"}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{p.freelancer.headline || "Independent Specialist"}</p>
                       </div>
                     </div>
 
                     <div className="sm:text-right">
-                      <p className="text-lg font-black text-slate-900">${p.bidAmount.toLocaleString()}</p>
-                      <p className="text-xs text-slate-500">Estimated duration: {p.estimatedDays} days</p>
+                      <p className="text-lg font-black text-slate-900 dark:text-white">${p.bidAmount.toLocaleString()}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Estimated duration: {p.estimatedDays} days</p>
                     </div>
                   </div>
 
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
                     {p.coverLetter}
                   </div>
+
+                  {/* Attached Work Samples / Proposal Documents */}
+                  {p.attachments && p.attachments.length > 0 && (
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                        <Paperclip className="h-3 w-3" /> Attached Work Samples ({p.attachments.length}):
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {p.attachments.map((att) => (
+                          <a
+                            key={att.id}
+                            href={att.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download={att.fileName}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-medium transition-colors border border-slate-200 dark:border-slate-700 shadow-subtle dark:shadow-none"
+                          >
+                            {getFileIcon(att.mimeType, att.fileName)}
+                            <span className="truncate max-w-[180px]">{att.fileName}</span>
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500">({formatFileSize(att.sizeBytes)})</span>
+                            <Download className="h-3 w-3 text-slate-400 dark:text-slate-400 ml-0.5" />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </Card>
               ))
             )}
@@ -311,20 +351,20 @@ export default function JobDetailPage() {
 
         {/* Freelancer: Proposal Submission Form */}
         {isFreelancer && (
-          <Card className="p-6 sm:p-8 bg-white border-slate-200 shadow-card space-y-6">
-            <div className="border-b border-slate-100 pb-4">
-              <h2 className="text-xl font-bold text-slate-900">Submit a Proposal for this Project</h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+          <Card className="p-6 sm:p-8 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-card dark:shadow-none space-y-6">
+            <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Submit a Proposal for this Project</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Specify your bid and timeline. Milestone payments will be held securely in escrow before you begin.
               </p>
             </div>
 
             {proposalSuccess ? (
-              <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
-                <CheckCircle className="h-8 w-8 text-emerald-600 mx-auto" />
-                <h3 className="text-base font-bold text-emerald-900">Proposal Submitted Successfully!</h3>
-                <p className="text-xs text-emerald-700">
-                  The client has received your bid and cover letter. You can track this proposal in your dashboard.
+              <div className="p-6 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-center space-y-2">
+                <CheckCircle className="h-8 w-8 text-emerald-600 dark:text-emerald-400 mx-auto" />
+                <h3 className="text-base font-bold text-emerald-900 dark:text-emerald-300">Proposal Submitted Successfully!</h3>
+                <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                  The client has received your bid, cover letter, and attached work samples. You can track this proposal in your dashboard.
                 </p>
                 <Link href="/freelancer/dashboard">
                   <Button variant="outline" size="sm" className="mt-3">
@@ -335,14 +375,14 @@ export default function JobDetailPage() {
             ) : (
               <form onSubmit={handleSubmitProposal} className="space-y-5">
                 {errorMsg && (
-                  <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
+                  <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-medium">
                     {errorMsg}
                   </div>
                 )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                       Your Total Bid Amount ($)
                     </label>
                     <Input
@@ -353,11 +393,11 @@ export default function JobDetailPage() {
                       value={bidAmount}
                       onChange={(e) => setBidAmount(e.target.value)}
                     />
-                    <p className="text-[11px] text-slate-400">Estimated platform fee (10%) deducted upon milestone release.</p>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500">Estimated platform fee (10%) deducted upon milestone release.</p>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                       Estimated Duration (Days)
                     </label>
                     <Input
@@ -368,7 +408,7 @@ export default function JobDetailPage() {
                       value={estimatedDays}
                       onChange={(e) => setEstimatedDays(e.target.value)}
                     />
-                    <p className="text-[11px] text-slate-400">Calendar days to complete all deliverables.</p>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500">Calendar days to complete all deliverables.</p>
                   </div>
                 </div>
 
@@ -380,15 +420,22 @@ export default function JobDetailPage() {
                     rows={5}
                     required
                     minLength={20}
-                    className="w-full p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 leading-relaxed resize-y"
+                    className="w-full p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 leading-relaxed resize-y"
                     placeholder="Describe your relevant experience, proposed architecture, and how you will execute this project with milestone precision..."
                     value={coverLetter}
                     onChange={(e) => setCoverLetter(e.target.value)}
                   />
-                  <p className="text-[11px] text-slate-400">Minimum 20 characters.</p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500">Minimum 20 characters.</p>
                 </div>
 
-                <Button type="submit" disabled={submitting} className="font-semibold gap-2">
+                {/* File Attachments Component */}
+                <FileAttachmentUpload
+                  attachments={attachments}
+                  onChange={setAttachments}
+                  disabled={submitting}
+                />
+
+                <Button type="submit" disabled={submitting} className="font-semibold gap-2 shadow-md">
                   {submitting ? "Submitting Proposal..." : "Submit Proposal"}
                   <Send className="h-4 w-4" />
                 </Button>

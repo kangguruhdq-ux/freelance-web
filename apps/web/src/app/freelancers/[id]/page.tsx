@@ -114,11 +114,11 @@ export default function FreelancerProfilePage() {
             </div>
 
             <div className="sm:text-right shrink-0">
-              <p className="text-xs uppercase font-semibold text-slate-400">Hourly Rate</p>
-              <p className="text-2xl sm:text-3xl font-black text-slate-900">
-                ${profile.hourlyRate}<span className="text-xs font-normal text-slate-500">/hr</span>
+              <p className="text-xs uppercase font-semibold text-slate-400 dark:text-slate-500">Hourly Rate</p>
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+                ${profile.hourlyRate}<span className="text-xs font-normal text-slate-500 dark:text-slate-400">/hr</span>
               </p>
-              <span className="text-xs text-emerald-600 font-medium flex items-center gap-1 sm:justify-end mt-1">
+              <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1 sm:justify-end mt-1">
                 <CheckCircle2 className="h-3.5 w-3.5" /> Available for Hire
               </span>
             </div>
@@ -126,18 +126,18 @@ export default function FreelancerProfilePage() {
 
           {/* Bio */}
           <div className="space-y-2">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">About Me</h2>
-            <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">About Me</h2>
+            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
               {profile.bio}
             </p>
           </div>
 
           {/* Skills */}
           <div className="space-y-2">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">Skills &amp; Expertise</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Skills &amp; Expertise</h2>
             <div className="flex flex-wrap gap-2">
               {profile.skills.map((s) => (
-                <Badge key={s.id} variant="outline" className="px-3 py-1 text-xs font-medium bg-slate-50 text-slate-700">
+                <Badge key={s.id} variant="outline" className="px-3 py-1 text-xs font-medium bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700">
                   {s.name}
                 </Badge>
               ))}
@@ -148,21 +148,21 @@ export default function FreelancerProfilePage() {
         {/* Portfolio Showcase */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
               Featured Portfolio ({profile.portfolio.length})
             </h2>
           </div>
 
           {profile.portfolio.length === 0 ? (
-            <Card className="p-8 text-center bg-white border-slate-200">
-              <Briefcase className="h-8 w-8 text-slate-400 mx-auto mb-2" />
-              <p className="text-sm font-semibold text-slate-700">No portfolio items published yet</p>
+            <Card className="p-8 text-center bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+              <Briefcase className="h-8 w-8 text-slate-400 dark:text-slate-500 mx-auto mb-2" />
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">No portfolio items published yet</p>
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {profile.portfolio.map((item) => (
-                <Card key={item.id} className="p-6 bg-white border-slate-200 shadow-card space-y-3">
-                  <div className="h-40 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center relative">
+                <Card key={item.id} className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-card dark:shadow-none hover:-translate-y-1 hover:shadow-card-hover dark:hover:shadow-glow-brand/5 transition-all duration-300 space-y-3">
+                  <div className="h-40 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={item.coverImage}
@@ -175,25 +175,25 @@ export default function FreelancerProfilePage() {
                     <span className="text-xs font-semibold text-slate-400 absolute">Featured Project</span>
                   </div>
 
-                  <h3 className="text-base font-bold text-slate-900">{item.title}</h3>
-                  <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">{item.description}</p>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">{item.title}</h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed line-clamp-3">{item.description}</p>
 
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {item.technologies.map((tech) => (
-                      <span key={tech} className="px-2 py-0.5 rounded bg-slate-100 text-[11px] font-medium text-slate-600">
+                      <span key={tech} className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[11px] font-medium text-slate-600 dark:text-slate-300">
                         {tech}
                       </span>
                     ))}
                   </div>
 
                   {(item.projectUrl || item.githubUrl) && (
-                    <div className="pt-2 flex items-center gap-3 border-t border-slate-100">
+                    <div className="pt-2 flex items-center gap-3 border-t border-slate-100 dark:border-slate-800">
                       {item.projectUrl && (
                         <a
                           href={item.projectUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-xs font-semibold text-brand-600 hover:text-brand-700 inline-flex items-center gap-1"
+                          className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 inline-flex items-center gap-1"
                         >
                           Live Demo <ExternalLink className="h-3 w-3" />
                         </a>
@@ -203,7 +203,7 @@ export default function FreelancerProfilePage() {
                           href={item.githubUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-xs font-semibold text-slate-600 hover:text-slate-800 inline-flex items-center gap-1"
+                          className="text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 inline-flex items-center gap-1"
                         >
                           Code Repository <Github className="h-3 w-3" />
                         </a>

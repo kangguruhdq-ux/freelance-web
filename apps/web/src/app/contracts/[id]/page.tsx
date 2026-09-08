@@ -326,11 +326,11 @@ export default function ContractWorkspacePage() {
         {activeTab === "milestones" && (
           <div className="space-y-4">
             {workspace.milestones.map((milestone, idx) => (
-              <Card key={milestone.id} className="p-6 bg-white border-slate-200 shadow-card space-y-4">
+              <Card key={milestone.id} className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-card dark:shadow-none space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold uppercase text-slate-400">
+                      <span className="text-xs font-bold uppercase text-slate-400 dark:text-slate-500">
                         Milestone {idx + 1}
                       </span>
                       <Badge
@@ -346,21 +346,21 @@ export default function ContractWorkspacePage() {
                         {milestone.status}
                       </Badge>
                     </div>
-                    <h3 className="text-lg font-bold text-slate-900">{milestone.title}</h3>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">{milestone.title}</h3>
                     {milestone.description && (
-                      <p className="text-xs sm:text-sm text-slate-600">{milestone.description}</p>
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300">{milestone.description}</p>
                     )}
                   </div>
 
                   <div className="sm:text-right shrink-0">
-                    <p className="text-xs font-semibold text-slate-400">Milestone Value</p>
-                    <p className="text-2xl font-black text-slate-900">${milestone.amount.toLocaleString()}</p>
+                    <p className="text-xs font-semibold text-slate-400 dark:text-slate-500">Milestone Value</p>
+                    <p className="text-2xl font-black text-slate-900 dark:text-white">${milestone.amount.toLocaleString()}</p>
                   </div>
                 </div>
 
                 {/* Milestone Action Controls */}
-                <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
-                  <div className="text-xs text-slate-400">
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                  <div className="text-xs text-slate-400 dark:text-slate-500">
                     {milestone.approvedAt
                       ? `Approved on ${new Date(milestone.approvedAt).toLocaleDateString()}`
                       : milestone.submittedAt
@@ -375,7 +375,7 @@ export default function ContractWorkspacePage() {
                         size="sm"
                         disabled={actionLoading}
                         onClick={() => handleMilestoneAction(milestone.id, "submit")}
-                        className="font-semibold text-xs"
+                        className="font-semibold text-xs shadow-sm"
                       >
                         Submit Deliverables
                       </Button>
@@ -401,7 +401,7 @@ export default function ContractWorkspacePage() {
                                 setActionLoading(false);
                               }
                             }}
-                            className="font-semibold text-xs bg-brand-600 hover:bg-brand-700 text-white"
+                            className="font-semibold text-xs bg-brand-600 hover:bg-brand-700 text-white shadow-sm"
                           >
                             Fund Escrow (${milestone.amount.toLocaleString()})
                           </Button>
@@ -414,7 +414,7 @@ export default function ContractWorkspacePage() {
                               size="sm"
                               disabled={actionLoading}
                               onClick={() => handleMilestoneAction(milestone.id, "revision")}
-                              className="font-semibold text-xs text-amber-700 border-amber-200"
+                              className="font-semibold text-xs text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/80"
                             >
                               Request Revision
                             </Button>
@@ -434,7 +434,7 @@ export default function ContractWorkspacePage() {
                                   setActionLoading(false);
                                 }
                               }}
-                              className="font-semibold text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                              className="font-semibold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
                             >
                               Release Payment (${milestone.amount.toLocaleString()})
                             </Button>
@@ -449,12 +449,12 @@ export default function ContractWorkspacePage() {
 
             {/* Review Section when COMPLETED */}
             {workspace.status === "COMPLETED" && (
-              <Card className="p-6 bg-emerald-50/60 border border-emerald-200 shadow-card space-y-4">
+              <Card className="p-6 bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 shadow-card dark:shadow-none space-y-4">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                  <h3 className="text-base font-bold text-slate-900">Project Completed &amp; Escrow Released</h3>
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Project Completed &amp; Escrow Released</h3>
                 </div>
-                <p className="text-xs text-slate-600">
+                <p className="text-xs text-slate-600 dark:text-slate-300">
                   All deliverables have been finalized and funds released. Leave a verified feedback review to endorse your counterparty.
                 </p>
                 <div className="pt-2">
@@ -477,7 +477,7 @@ export default function ContractWorkspacePage() {
                         alert(e.message);
                       }
                     }}
-                    className="font-semibold text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="font-semibold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
                   >
                     Submit Verified Review
                   </Button>
@@ -489,13 +489,13 @@ export default function ContractWorkspacePage() {
 
         {/* Tab 2: Project Messages Chat */}
         {activeTab === "messages" && (
-          <Card className="p-0 bg-white border-slate-200 shadow-card flex flex-col h-[520px]">
-            <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+          <Card className="p-0 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-card dark:shadow-none flex flex-col h-[520px]">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">Encrypted Project Conversation</h3>
-                <p className="text-[11px] text-slate-500">Only authorized contract participants can view and participate.</p>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Encrypted Project Conversation</h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">Only authorized contract participants can view and participate.</p>
               </div>
-              <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
+              <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> Live Workspace
               </span>
             </div>
@@ -503,7 +503,7 @@ export default function ContractWorkspacePage() {
             {/* Message History */}
             <div className="flex-1 p-4 overflow-y-auto space-y-4">
               {messages.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-center text-slate-400 text-xs">
+                <div className="h-full flex items-center justify-center text-center text-slate-400 dark:text-slate-500 text-xs">
                   No messages yet. Send a greeting to initiate project collaboration.
                 </div>
               ) : (
@@ -513,8 +513,8 @@ export default function ContractWorkspacePage() {
                     className={`flex flex-col ${m.isSender ? "items-end" : "items-start"}`}
                   >
                     <div className="flex items-center gap-1.5 mb-1 px-1">
-                      <span className="text-[11px] font-bold text-slate-600">{m.senderName}</span>
-                      <span className="text-[10px] text-slate-400">
+                      <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400">{m.senderName}</span>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500">
                         {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </div>
@@ -522,7 +522,7 @@ export default function ContractWorkspacePage() {
                       className={`max-w-md p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed ${
                         m.isSender
                           ? "bg-brand-600 text-white rounded-br-none shadow-sm"
-                          : "bg-slate-100 text-slate-800 rounded-bl-none"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-bl-none"
                       }`}
                     >
                       {m.content}
@@ -533,14 +533,14 @@ export default function ContractWorkspacePage() {
             </div>
 
             {/* Message Input */}
-            <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-100 flex items-center gap-2">
+            <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
               <Input
                 placeholder="Type your project message or deliverable update..."
                 className="flex-1 h-11"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
               />
-              <Button type="submit" disabled={sendingMessage || !newMessage.trim()} className="gap-1.5 font-semibold h-11">
+              <Button type="submit" disabled={sendingMessage || !newMessage.trim()} className="gap-1.5 font-semibold h-11 shadow-sm">
                 Send
                 <Send className="h-4 w-4" />
               </Button>
@@ -550,9 +550,9 @@ export default function ContractWorkspacePage() {
 
         {/* Tab 3: Project Scope Overview */}
         {activeTab === "overview" && (
-          <Card className="p-6 bg-white border-slate-200 shadow-card space-y-4">
-            <h3 className="text-base font-bold text-slate-900">Project Description &amp; Scope</h3>
-            <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+          <Card className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-card dark:shadow-none space-y-4">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">Project Description &amp; Scope</h3>
+            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
               {workspace.job.description}
             </p>
           </Card>

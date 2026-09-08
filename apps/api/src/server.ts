@@ -3,7 +3,11 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 
+const initialEnv = process.env.NODE_ENV;
 dotenv.config();
+if (initialEnv) {
+  process.env.NODE_ENV = initialEnv;
+}
 
 import authRoutes from "./routes/auth.routes";
 import userRoutes from "./routes/user.routes";
@@ -47,8 +51,8 @@ app.use(
   })
 );
 
-app.use(express.json({ limit: "2mb" }));
-app.use(express.urlencoded({ extended: true, limit: "2mb" }));
+app.use(express.json({ limit: "25mb" }));
+app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 app.use(cookieParser());
 
 // Public Health Check

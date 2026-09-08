@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 
 export function CtaBanner() {
   return (
-    <section className="py-16 sm:py-24 bg-white border-t border-slate-200/80">
+    <section className="py-16 sm:py-24 bg-white dark:bg-slate-950 border-t border-slate-200/80 dark:border-slate-800/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-brand-950 p-8 sm:p-12 lg:p-16 text-white overflow-hidden shadow-2xl">
+        <div className="relative rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-brand-950 dark:from-slate-900 dark:via-slate-900/95 dark:to-slate-950 border border-transparent dark:border-slate-800 p-8 sm:p-12 lg:p-16 text-white overflow-hidden shadow-2xl dark:shadow-glow-brand/10">
           {/* Subtle geometric background glow */}
           <div className="absolute right-0 top-0 -mt-12 -mr-12 w-96 h-96 bg-brand-500/10 rounded-full blur-3xl pointer-events-none" />
 

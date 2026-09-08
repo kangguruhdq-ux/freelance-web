@@ -443,6 +443,7 @@ router.get("/:id/proposals", authenticate, async (req: Request, res: Response): 
             },
           },
         },
+        attachments: true,
       },
     });
 
@@ -462,6 +463,13 @@ router.get("/:id/proposals", authenticate, async (req: Request, res: Response): 
         rating: Number(p.freelancer.profile?.rating || 5.0),
         completedJobs: p.freelancer.profile?.completedJobs || 0,
       },
+      attachments: p.attachments.map((a) => ({
+        id: a.id,
+        fileName: a.fileName,
+        fileUrl: a.fileUrl,
+        mimeType: a.mimeType,
+        sizeBytes: a.sizeBytes,
+      })),
     }));
 
     res.status(200).json({

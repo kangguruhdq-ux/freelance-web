@@ -76,36 +76,36 @@ export default function NewJobPage() {
 
   return (
     <ProtectedRoute allowedRoles={["CLIENT"]}>
-      <div className="min-h-screen bg-slate-50/50 py-10">
+      <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 py-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-          <Link href="/client/dashboard" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-brand-600 transition-colors">
+          <Link href="/client/dashboard" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
             <ArrowLeft className="h-4 w-4" />
             Back to Client Workspace
           </Link>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Post a New Project</h1>
-              <p className="text-sm text-slate-500 mt-1">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Post a New Project</h1>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                 Define deliverables, target budget, and find top talent with escrow protection.
               </p>
             </div>
-            <span className="text-xs text-emerald-600 font-medium flex items-center gap-1.5 self-start sm:self-auto bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5 self-start sm:self-auto bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1.5 rounded-full border border-emerald-200 dark:border-emerald-800">
               <ShieldCheck className="h-4 w-4" /> Milestone Escrow Active
             </span>
           </div>
 
-          <Card className="p-6 sm:p-8 bg-white border-slate-200 shadow-card">
+          <Card className="p-6 sm:p-8 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-card dark:shadow-none">
             <form onSubmit={handleSubmit} className="space-y-6">
               {errorMsg && (
-                <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
+                <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-medium">
                   {errorMsg}
                 </div>
               )}
 
               {/* Title */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                   Project Title *
                 </label>
                 <Input
@@ -116,18 +116,18 @@ export default function NewJobPage() {
                   onChange={(e) => setTitle(e.target.value)}
                   className="h-11"
                 />
-                <p className="text-[11px] text-slate-400">Keep it clear and specific to attract relevant specialists.</p>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500">Keep it clear and specific to attract relevant specialists.</p>
               </div>
 
               {/* Category & Budget Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                     Category *
                   </label>
                   <select
                     required
-                    className="w-full h-11 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="w-full h-11 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
                     value={categoryId}
                     onChange={(e) => setCategoryId(e.target.value)}
                   >
@@ -140,7 +140,7 @@ export default function NewJobPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                     Estimated Budget ($ USD) *
                   </label>
                   <Input
@@ -158,11 +158,11 @@ export default function NewJobPage() {
               {/* Parameters Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                     Budget Type
                   </label>
                   <select
-                    className="w-full h-11 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="w-full h-11 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
                     value={budgetType}
                     onChange={(e) => setBudgetType(e.target.value)}
                   >
@@ -172,11 +172,11 @@ export default function NewJobPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                     Experience Level
                   </label>
                   <select
-                    className="w-full h-11 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="w-full h-11 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
                     value={experienceLevel}
                     onChange={(e) => setExperienceLevel(e.target.value)}
                   >
@@ -187,11 +187,11 @@ export default function NewJobPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                     Location Type
                   </label>
                   <select
-                    className="w-full h-11 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="w-full h-11 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
                     value={locationType}
                     onChange={(e) => setLocationType(e.target.value)}
                   >
@@ -204,19 +204,19 @@ export default function NewJobPage() {
 
               {/* Description */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                   Project Description &amp; Scope *
                 </label>
                 <textarea
                   rows={8}
                   required
                   minLength={20}
-                  className="w-full p-4 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 leading-relaxed resize-y"
+                  className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 leading-relaxed resize-y"
                   placeholder="Detail the scope of work, technical requirements, deliverables, milestones, and expected timeline..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                 />
-                <p className="text-[11px] text-slate-400">Minimum 20 characters.</p>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500">Minimum 20 characters.</p>
               </div>
 
               <div className="pt-2 flex justify-end gap-3">
@@ -225,7 +225,7 @@ export default function NewJobPage() {
                     Cancel
                   </Button>
                 </Link>
-                <Button type="submit" disabled={submitting} className="gap-2 font-semibold">
+                <Button type="submit" disabled={submitting} className="gap-2 font-semibold shadow-md">
                   {submitting ? "Publishing Project..." : "Publish Project"}
                   <Plus className="h-4 w-4" />
                 </Button>

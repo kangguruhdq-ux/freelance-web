@@ -29,16 +29,16 @@ const TRUST_FEATURES = [
 
 export function TrustSecurity() {
   return (
-    <section id="security" className="py-16 sm:py-24 bg-white border-t border-slate-200/80">
+    <section id="security" className="py-16 sm:py-24 bg-white dark:bg-slate-950 border-t border-slate-200/80 dark:border-slate-800/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto text-center mb-14">
-          <span className="text-xs font-bold uppercase tracking-wider text-brand-600">
+          <span className="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
             Enterprise-Grade Assurance
           </span>
-          <h2 className="mt-1.5 text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
+          <h2 className="mt-1.5 text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Security & Trust Built Into Every Interaction
           </h2>
-          <p className="mt-2.5 text-sm sm:text-base text-slate-600">
+          <p className="mt-2.5 text-sm sm:text-base text-slate-600 dark:text-slate-300">
             We eliminated the uncertainty of freelance contracting with programmatic safeguards and financial protection.
           </p>
         </div>
@@ -49,20 +49,20 @@ export function TrustSecurity() {
             return (
               <div
                 key={idx}
-                className="p-6 rounded-2xl bg-slate-50/70 border border-slate-200/80 hover:border-brand-200 transition-all flex flex-col justify-between"
+                className="p-6 rounded-2xl bg-slate-50/70 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-brand-300 dark:hover:border-brand-700/60 hover:-translate-y-1.5 hover:shadow-card-hover dark:hover:shadow-glow-brand/5 transition-all duration-300 flex flex-col justify-between"
               >
                 <div>
-                  <div className="h-11 w-11 rounded-xl bg-white text-brand-600 border border-slate-200/80 flex items-center justify-center shadow-subtle mb-4">
+                  <div className="h-11 w-11 rounded-xl bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 border border-slate-200/80 dark:border-slate-700 flex items-center justify-center shadow-subtle dark:shadow-none mb-4">
                     <Icon className="h-5 w-5" />
                   </div>
-                  <h3 className="text-base font-bold text-slate-900 leading-snug">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white leading-snug">
                     {item.title}
                   </h3>
-                  <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                     {item.description}
                   </p>
                 </div>
-                <div className="mt-6 pt-3 border-t border-slate-200/60 flex items-center gap-1.5 text-xs text-emerald-700 font-medium">
+                <div className="mt-6 pt-3 border-t border-slate-200/60 dark:border-slate-800 flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 font-medium">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   <span>Guaranteed by FreelanceHub</span>
                 </div>
