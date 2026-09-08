@@ -1,0 +1,6 @@
+{
+  "name": "@freelancehub/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FreelanceHub NestJS backend API (Checkpoint 2+)"
+}
