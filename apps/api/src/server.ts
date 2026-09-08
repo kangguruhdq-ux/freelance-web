@@ -11,6 +11,9 @@ import adminRoutes from "./routes/admin.routes";
 import jobRoutes from "./routes/jobs.routes";
 import proposalRoutes from "./routes/proposals.routes";
 import profileRoutes from "./routes/profiles.routes";
+import contractRoutes from "./routes/contracts.routes";
+import milestoneRoutes from "./routes/milestones.routes";
+import messageRoutes from "./routes/messages.routes";
 
 export const app = express();
 const PORT = process.env.API_PORT || 4000;
@@ -49,6 +52,10 @@ app.use("/admin", adminRoutes);
 app.use("/jobs", jobRoutes);
 app.use("/proposals", proposalRoutes);
 app.use("/profiles", profileRoutes);
+app.use("/contracts", contractRoutes);
+app.use("/contracts", messageRoutes);
+app.use("/milestones", milestoneRoutes);
+
 
 
 // 404 Handler
