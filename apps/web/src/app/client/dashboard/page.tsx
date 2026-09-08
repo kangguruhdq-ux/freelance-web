@@ -54,9 +54,12 @@ export default function ClientDashboardPage() {
   React.useEffect(() => {
     apiFetch("/contracts")
       .then((data) => {
-        if (data.success && Array.isArray(data.contracts)) {
-          setContracts(data.contracts);
-        }
+        const list = Array.isArray(data.contracts)
+          ? data.contracts
+          : Array.isArray(data.data)
+          ? data.data
+          : [];
+        setContracts(list);
       })
       .catch((err) => console.error("Error loading contracts:", err))
       .finally(() => setLoading(false));

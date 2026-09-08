@@ -151,6 +151,13 @@ router.get("/me", authenticate, requireRole("FREELANCER"), async (req: Request, 
       coverLetter: p.coverLetter,
       status: p.status,
       createdAt: p.createdAt.toISOString(),
+      job: {
+        id: p.job.id,
+        title: p.job.title,
+        budget: Number(p.job.budget),
+        status: p.job.status,
+        client: p.job.client,
+      },
       attachments: p.attachments.map((a) => ({
         id: a.id,
         fileName: a.fileName,
@@ -163,6 +170,7 @@ router.get("/me", authenticate, requireRole("FREELANCER"), async (req: Request, 
     res.status(200).json({
       success: true,
       data: formatted,
+      proposals: formatted,
     });
   } catch (error) {
     console.error("Fetch my proposals error:", error);

@@ -83,13 +83,45 @@ router.post("/:id/submit", authenticate, async (req: Request, res: Response): Pr
       return;
     }
 
+    const { deliverableNotes, workUrl } = req.body || {};
+
     const updated = await prisma.milestone.update({
       where: { id },
       data: {
         status: "SUBMITTED",
         submittedAt: new Date(),
+        ...(deliverableNotes ? { description: deliverableNotes } : {}),
       },
     });
+
+    // Auto-post deliverable notification to conversation
+    try {
+      const convParticipant = await prisma.conversationParticipant.findFirst({
+        where: { userId: milestone.contract.clientId },
+        select: { conversationId: true },
+      });
+      if (convParticipant) {
+        const shared = await prisma.conversationParticipant.findFirst({
+          where: {
+            conversationId: convParticipant.conversationId,
+            userId: milestone.contract.freelancerId,
+          },
+        });
+        if (shared) {
+          const noteText = deliverableNotes ? `\n\n📝 Notes: ${deliverableNotes}` : "";
+          const urlText = workUrl ? `\n🔗 Link: ${workUrl}` : "";
+          await prisma.message.create({
+            data: {
+              conversationId: shared.conversationId,
+              senderId: req.user!.id,
+              content: `🚀 Deliverable submitted for "${milestone.title}"!${noteText}${urlText}`,
+            },
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("Could not post deliverable message to conversation:", e);
+    }
 
     res.status(200).json({
       success: true,

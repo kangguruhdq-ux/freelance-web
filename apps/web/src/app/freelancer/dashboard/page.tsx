@@ -28,11 +28,12 @@ interface ContractItem {
 interface SubmittedProposalItem {
   id: string;
   jobId: string;
+  jobTitle?: string;
   bidAmount: number;
   estimatedDays: number;
   status: string;
   createdAt: string;
-  job: {
+  job?: {
     id: string;
     title: string;
     category?: { name: string } | string;
@@ -59,9 +60,12 @@ export default function FreelancerDashboardPage() {
   React.useEffect(() => {
     apiFetch("/contracts")
       .then((data) => {
-        if (data.success && Array.isArray(data.contracts)) {
-          setContracts(data.contracts);
-        }
+        const list = Array.isArray(data.contracts)
+          ? data.contracts
+          : Array.isArray(data.data)
+          ? data.data
+          : [];
+        setContracts(list);
       })
       .catch((err) => console.error("Error loading contracts:", err))
       .finally(() => setLoading(false));
@@ -70,9 +74,12 @@ export default function FreelancerDashboardPage() {
   React.useEffect(() => {
     apiFetch("/proposals/me")
       .then((data) => {
-        if (data.success && Array.isArray(data.proposals)) {
-          setProposals(data.proposals);
-        }
+        const list = Array.isArray(data.proposals)
+          ? data.proposals
+          : Array.isArray(data.data)
+          ? data.data
+          : [];
+        setProposals(list);
       })
       .catch((err) => console.error("Error loading proposals:", err))
       .finally(() => setProposalsLoading(false));
@@ -208,7 +215,7 @@ export default function FreelancerDashboardPage() {
 
                     <Link href={`/jobs/${prop.jobId}`} className="hover:underline">
                       <h3 className="text-base font-bold text-slate-900 dark:text-white hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
-                        {prop.job?.title || "Project Application"}
+                        {prop.jobTitle || prop.job?.title || "Project Application"}
                       </h3>
                     </Link>
 

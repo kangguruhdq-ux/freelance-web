@@ -182,6 +182,7 @@ router.get("/", authenticate, async (req: Request, res: Response): Promise<void>
     res.status(200).json({
       success: true,
       data: formatted,
+      contracts: formatted,
     });
   } catch (error) {
     console.error("List contracts error:", error);
@@ -234,6 +235,21 @@ router.get("/:id", authenticate, async (req: Request, res: Response): Promise<vo
         error: "Forbidden: You are not an authorized participant in this project workspace.",
       });
       return;
+    }
+
+    // Ensure contract has at least one milestone
+    if (contract.milestones.length === 0) {
+      const defaultMilestone = await prisma.milestone.create({
+        data: {
+          contractId: contract.id,
+          title: "Full Project Scope & Final Deliverables",
+          description: "Execution and completion of all deliverables agreed upon in project specification.",
+          amount: contract.totalAmount,
+          status: "PENDING",
+          orderIndex: 1,
+        },
+      });
+      contract.milestones = [defaultMilestone];
     }
 
     res.status(200).json({
