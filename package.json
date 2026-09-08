@@ -11,7 +11,15 @@
     "build:web": "npm --workspace=apps/web run build",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present"
+    "lint": "npm run lint --workspaces --if-present",
+    "db:format": "npm --workspace=apps/api run db:format",
+    "db:validate": "npm --workspace=apps/api run db:validate",
+    "db:generate": "npm --workspace=apps/api run db:generate",
+    "db:migrate": "npm --workspace=apps/api run db:migrate",
+    "db:push": "npm --workspace=apps/api run db:push",
+    "db:seed": "npm --workspace=apps/api run db:seed",
+    "db:studio": "npm --workspace=apps/api run db:studio",
+    "db:start": "npm --workspace=apps/api run db:start"
   },
   "devDependencies": {
     "typescript": "^5.7.3"
