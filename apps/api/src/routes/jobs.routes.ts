@@ -12,6 +12,7 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
       search,
       category,
       categoryId,
+      clientId,
       minBudget,
       maxBudget,
       budgetType,
@@ -30,6 +31,10 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
 
     if (status && status !== "ALL") {
       where.status = status as JobStatus;
+    }
+
+    if (clientId) {
+      where.clientId = clientId as string;
     }
 
     if (categoryId) {
@@ -444,6 +449,13 @@ router.get("/:id/proposals", authenticate, async (req: Request, res: Response): 
           },
         },
         attachments: true,
+        contract: {
+          select: {
+            id: true,
+            contractNumber: true,
+            status: true,
+          },
+        },
       },
     });
 
@@ -470,6 +482,13 @@ router.get("/:id/proposals", authenticate, async (req: Request, res: Response): 
         mimeType: a.mimeType,
         sizeBytes: a.sizeBytes,
       })),
+      contract: p.contract
+        ? {
+            id: p.contract.id,
+            contractNumber: p.contract.contractNumber,
+            status: p.contract.status,
+          }
+        : null,
     }));
 
     res.status(200).json({

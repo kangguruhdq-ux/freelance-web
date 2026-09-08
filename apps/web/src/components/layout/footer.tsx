@@ -64,7 +64,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/register" className="hover:text-white transition-colors">
+                <Link href="/client/jobs/new" className="hover:text-white transition-colors">
                   Post a Project
                 </Link>
               </li>
@@ -78,7 +78,7 @@ export function Footer() {
             </p>
             <ul className="space-y-2 text-sm text-slate-400">
               <li>
-                <Link href="#jobs" className="hover:text-white transition-colors">
+                <Link href="/jobs" className="hover:text-white transition-colors">
                   Find Work
                 </Link>
               </li>

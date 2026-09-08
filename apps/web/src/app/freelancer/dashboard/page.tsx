@@ -4,11 +4,12 @@ import * as React from "react";
 import Link from "next/link";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { useAuth } from "@/context/auth-context";
-import { FileText, CheckCircle2, DollarSign, Search, Star, Sparkles, ExternalLink, ArrowRight, Briefcase } from "lucide-react";
+import { FileText, CheckCircle2, DollarSign, Search, Star, Sparkles, ExternalLink, ArrowRight, Briefcase, Paperclip, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { apiFetch } from "@/lib/api-client";
+import { useRouter } from "next/navigation";
 
 interface ContractItem {
   id: string;
@@ -24,10 +25,36 @@ interface ContractItem {
   milestones: Array<{ id: string; title: string; status: string; amount: number }>;
 }
 
+interface SubmittedProposalItem {
+  id: string;
+  jobId: string;
+  bidAmount: number;
+  estimatedDays: number;
+  status: string;
+  createdAt: string;
+  job: {
+    id: string;
+    title: string;
+    category?: { name: string } | string;
+    budget?: number;
+  };
+  attachments?: Array<{ id: string; fileName: string }>;
+}
+
 export default function FreelancerDashboardPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [contracts, setContracts] = React.useState<ContractItem[]>([]);
+  const [proposals, setProposals] = React.useState<SubmittedProposalItem[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [proposalsLoading, setProposalsLoading] = React.useState(true);
+
+  // Auto redirect if user is a CLIENT
+  React.useEffect(() => {
+    if (user && user.role === "CLIENT") {
+      router.replace("/client/dashboard");
+    }
+  }, [user, router]);
 
   React.useEffect(() => {
     apiFetch("/contracts")
@@ -38,6 +65,17 @@ export default function FreelancerDashboardPage() {
       })
       .catch((err) => console.error("Error loading contracts:", err))
       .finally(() => setLoading(false));
+  }, []);
+
+  React.useEffect(() => {
+    apiFetch("/proposals/me")
+      .then((data) => {
+        if (data.success && Array.isArray(data.proposals)) {
+          setProposals(data.proposals);
+        }
+      })
+      .catch((err) => console.error("Error loading proposals:", err))
+      .finally(() => setProposalsLoading(false));
   }, []);
 
   const totalEarned = contracts
@@ -117,7 +155,94 @@ export default function FreelancerDashboardPage() {
           </div>
         </div>
 
-        {/* Active Contracts & Milestones */}
+        {/* Section 1: My Submitted Proposals */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Send className="h-5 w-5 text-brand-600" />
+                My Submitted Proposals ({proposals.length})
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Track status of your submitted bids and portfolio attachments.
+              </p>
+            </div>
+            <Link href="/jobs">
+              <Button size="sm" className="gap-1.5 font-semibold text-xs">
+                <Search className="h-4 w-4" />
+                Find New Projects
+              </Button>
+            </Link>
+          </div>
+
+          {proposalsLoading ? (
+            <div className="p-8 text-center text-slate-400">Loading your submitted proposals...</div>
+          ) : proposals.length === 0 ? (
+            <Card className="p-8 text-center bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-card dark:shadow-none">
+              <FileText className="h-8 w-8 text-slate-400 mx-auto mb-2" />
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">No proposals submitted yet</p>
+              <p className="text-xs text-slate-500 mt-1">Browse open projects and submit a proposal to start earning.</p>
+              <div className="mt-4">
+                <Link href="/jobs">
+                  <Button size="sm">Browse Projects</Button>
+                </Link>
+              </div>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-3.5">
+              {proposals.map((prop) => (
+                <Card
+                  key={prop.id}
+                  className="p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-card dark:shadow-none hover:-translate-y-0.5 hover:shadow-card-hover dark:hover:shadow-glow-brand/5 hover:border-brand-300 dark:hover:border-brand-700/60 transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge
+                        variant={prop.status === "ACCEPTED" ? "success" : prop.status === "REJECTED" ? "destructive" : "warning"}
+                        className="text-[10px] font-bold uppercase"
+                      >
+                        {prop.status}
+                      </Badge>
+                      <span className="text-xs text-slate-400">• Submitted {new Date(prop.createdAt).toLocaleDateString()}</span>
+                    </div>
+
+                    <Link href={`/jobs/${prop.jobId}`} className="hover:underline">
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
+                        {prop.job?.title || "Project Application"}
+                      </h3>
+                    </Link>
+
+                    <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+                      <span>Your Bid: <strong className="text-slate-800 dark:text-slate-200">${prop.bidAmount?.toLocaleString()}</strong></span>
+                      <span>•</span>
+                      <span>Timeline: <strong>{prop.estimatedDays} days</strong></span>
+                      {prop.attachments && prop.attachments.length > 0 && (
+                        <>
+                          <span>•</span>
+                          <span className="inline-flex items-center gap-1 font-medium text-slate-700 dark:text-slate-300">
+                            <Paperclip className="h-3 w-3" />
+                            {prop.attachments.length} Samples Attached
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Link href={`/jobs/${prop.jobId}`}>
+                      <Button size="sm" variant="outline" className="gap-1.5 text-xs font-semibold">
+                        View Project
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Section 2: Active Contracts & Milestones */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Active Contracts &amp; Workspaces</h2>

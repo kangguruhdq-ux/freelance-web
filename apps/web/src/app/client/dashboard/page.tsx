@@ -4,11 +4,12 @@ import * as React from "react";
 import Link from "next/link";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { useAuth } from "@/context/auth-context";
-import { Briefcase, FileText, CheckCircle2, DollarSign, Plus, Search, ShieldCheck, ArrowRight, ExternalLink } from "lucide-react";
+import { Briefcase, FileText, CheckCircle2, DollarSign, Plus, Search, ShieldCheck, ArrowRight, ExternalLink, Users, Sparkles, FolderPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { apiFetch } from "@/lib/api-client";
+import { useRouter } from "next/navigation";
 
 interface ContractItem {
   id: string;
@@ -24,10 +25,31 @@ interface ContractItem {
   milestones: Array<{ id: string; title: string; status: string; amount: number }>;
 }
 
+interface PostedJobItem {
+  id: string;
+  title: string;
+  category: { name: string } | string;
+  budget: number;
+  budgetType: string;
+  status: string;
+  proposalsCount: number;
+  createdAt: string;
+}
+
 export default function ClientDashboardPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [contracts, setContracts] = React.useState<ContractItem[]>([]);
+  const [myJobs, setMyJobs] = React.useState<PostedJobItem[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [jobsLoading, setJobsLoading] = React.useState(true);
+
+  // Auto redirect if user is a FREELANCER
+  React.useEffect(() => {
+    if (user && user.role === "FREELANCER") {
+      router.replace("/freelancer/dashboard");
+    }
+  }, [user, router]);
 
   React.useEffect(() => {
     apiFetch("/contracts")
@@ -39,6 +61,20 @@ export default function ClientDashboardPage() {
       .catch((err) => console.error("Error loading contracts:", err))
       .finally(() => setLoading(false));
   }, []);
+
+  React.useEffect(() => {
+    if (!user?.id) return;
+    apiFetch(`/jobs?clientId=${user.id}&status=ALL&limit=50`)
+      .then((data) => {
+        if (data.success && Array.isArray(data.data)) {
+          setMyJobs(data.data);
+        } else if (data.success && Array.isArray(data.jobs)) {
+          setMyJobs(data.jobs);
+        }
+      })
+      .catch((err) => console.error("Error loading my jobs:", err))
+      .finally(() => setJobsLoading(false));
+  }, [user?.id]);
 
   const totalSpent = contracts.reduce((acc, c) => acc + c.totalAmount, 0);
   const activeContracts = contracts.filter((c) => c.status === "ACTIVE");
@@ -122,7 +158,91 @@ export default function ClientDashboardPage() {
           </div>
         </div>
 
-        {/* Active Contracts List */}
+        {/* Section 1: My Posted Projects */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-brand-600" />
+                My Posted Projects ({myJobs.length})
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Track incoming proposals, review applicants, and hire talent.
+              </p>
+            </div>
+            <Link href="/client/jobs/new">
+              <Button size="sm" className="gap-1.5 font-semibold text-xs">
+                <Plus className="h-4 w-4" />
+                Post a Project
+              </Button>
+            </Link>
+          </div>
+
+          {jobsLoading ? (
+            <div className="p-8 text-center text-slate-400">Loading your posted projects...</div>
+          ) : myJobs.length === 0 ? (
+            <Card className="p-8 text-center bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-card dark:shadow-none">
+              <FolderPlus className="h-8 w-8 text-slate-400 mx-auto mb-2" />
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">No projects posted yet</p>
+              <p className="text-xs text-slate-500 mt-1">Post a job description with your budget to start receiving proposals from top specialists.</p>
+              <div className="mt-4">
+                <Link href="/client/jobs/new">
+                  <Button size="sm">Post Your First Project</Button>
+                </Link>
+              </div>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-3.5">
+              {myJobs.map((job) => (
+                <Card
+                  key={job.id}
+                  className="p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-card dark:shadow-none hover:-translate-y-0.5 hover:shadow-card-hover dark:hover:shadow-glow-brand/5 hover:border-brand-300 dark:hover:border-brand-700/60 transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge
+                        variant={job.status === "OPEN" ? "success" : job.status === "IN_PROGRESS" ? "accent" : "outline"}
+                        className="text-[10px] font-bold"
+                      >
+                        {job.status}
+                      </Badge>
+                      <span className="text-xs font-semibold text-brand-600 dark:text-brand-400">
+                        {typeof job.category === "object" ? job.category.name : job.category}
+                      </span>
+                      <span className="text-xs text-slate-400">• Posted {new Date(job.createdAt).toLocaleDateString()}</span>
+                    </div>
+
+                    <Link href={`/jobs/${job.id}`} className="hover:underline">
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
+                        {job.title}
+                      </h3>
+                    </Link>
+
+                    <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+                      <span>Budget: <strong className="text-slate-800 dark:text-slate-200">${job.budget?.toLocaleString()} ({job.budgetType})</strong></span>
+                      <span>•</span>
+                      <span className="inline-flex items-center gap-1 font-semibold text-brand-600 dark:text-brand-400">
+                        <Users className="h-3.5 w-3.5" />
+                        {job.proposalsCount || 0} Proposals Received
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Link href={`/jobs/${job.id}`}>
+                      <Button size="sm" className="gap-1.5 font-bold text-xs bg-brand-600 hover:bg-brand-700 text-white shadow-sm">
+                        <Users className="h-3.5 w-3.5" />
+                        Review Proposals ({job.proposalsCount || 0})
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Section 2: Active Contracts List */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Active Project Workspaces</h2>

@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Layers, Menu, ArrowRight, LayoutDashboard, LogOut, User } from "lucide-react";
+import { Layers, Menu, ArrowRight, LayoutDashboard, LogOut, User, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -24,18 +24,19 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  if (pathname?.startsWith("/admin")) {
-    return null;
-  }
+  // Do not render consumer navbar on admin dashboard pages
+  if (pathname?.startsWith("/admin")) return null;
 
-  const getRoleBadgeVariant = (role?: string) => {
+  const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case "ADMIN":
         return "destructive";
+      case "CLIENT":
+        return "default";
       case "FREELANCER":
         return "secondary";
       default:
-        return "default";
+        return "outline";
     }
   };
 
@@ -48,15 +49,15 @@ export function Navbar() {
             : "border-b border-transparent bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm"
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
-          {/* Logo & Brand */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          {/* Brand Logo */}
           <div className="flex items-center gap-8">
             <Link
               href="/"
-              className="flex items-center gap-2.5 font-bold text-xl sm:text-2xl text-slate-900 dark:text-white tracking-tight transition-transform active:scale-95"
+              className="flex items-center gap-2.5 font-bold text-xl text-slate-900 dark:text-white tracking-tight hover:opacity-90 transition-opacity"
             >
-              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-brand-600 flex items-center justify-center text-white shadow-sm shadow-brand-500/25">
-                <Layers className="h-5 w-5 sm:h-6 sm:w-6" />
+              <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+                <Layers className="h-5 w-5" />
               </div>
               <span>
                 Freelance<span className="text-brand-600 dark:text-brand-400">Hub</span>
@@ -65,30 +66,88 @@ export function Navbar() {
 
             {/* Desktop Navigation Links */}
             <nav className="hidden lg:flex items-center gap-6">
-              <Link
-                href="/jobs"
-                className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
-              >
-                Find Work
-              </Link>
-              <Link
-                href="/#freelancers"
-                className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
-              >
-                Find Talent
-              </Link>
-              <Link
-                href="/#how-it-works"
-                className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
-              >
-                How It Works
-              </Link>
-              <Link
-                href="/#security"
-                className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
-              >
-                Escrow & Security
-              </Link>
+              {user?.role === "CLIENT" ? (
+                <>
+                  <Link
+                    href="/client/dashboard"
+                    className="text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+                  >
+                    My Projects
+                  </Link>
+                  <Link
+                    href="/jobs"
+                    className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+                  >
+                    Browse Marketplace
+                  </Link>
+                  <Link
+                    href="/#freelancers"
+                    className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+                  >
+                    Find Talent
+                  </Link>
+                  <Link
+                    href="/#security"
+                    className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+                  >
+                    Escrow Protection
+                  </Link>
+                </>
+              ) : user?.role === "FREELANCER" ? (
+                <>
+                  <Link
+                    href="/jobs"
+                    className="text-sm font-semibold text-brand-600 dark:text-brand-400 transition-colors"
+                  >
+                    Find Work
+                  </Link>
+                  <Link
+                    href="/freelancer/dashboard"
+                    className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+                  >
+                    My Proposals &amp; Contracts
+                  </Link>
+                  <Link
+                    href="/#how-it-works"
+                    className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+                  >
+                    How It Works
+                  </Link>
+                  <Link
+                    href="/#security"
+                    className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+                  >
+                    Guaranteed Payouts
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/jobs"
+                    className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+                  >
+                    Find Work
+                  </Link>
+                  <Link
+                    href="/#freelancers"
+                    className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+                  >
+                    Find Talent
+                  </Link>
+                  <Link
+                    href="/#how-it-works"
+                    className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+                  >
+                    How It Works
+                  </Link>
+                  <Link
+                    href="/#security"
+                    className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+                  >
+                    Escrow &amp; Security
+                  </Link>
+                </>
+              )}
             </nav>
           </div>
 
@@ -98,6 +157,15 @@ export function Navbar() {
 
             {isAuthenticated && user ? (
               <div className="flex items-center gap-3">
+                {user.role === "CLIENT" && (
+                  <Link href="/client/jobs/new">
+                    <Button size="sm" className="gap-1.5 font-bold text-xs bg-brand-600 hover:bg-brand-700 text-white shadow-sm shadow-brand-500/25">
+                      <Plus className="h-3.5 w-3.5" />
+                      Post a Project
+                    </Button>
+                  </Link>
+                )}
+
                 <Link href="/dashboard">
                   <Button variant="outline" size="sm" className="gap-2 font-medium">
                     <LayoutDashboard className="h-4 w-4 text-brand-600" />

@@ -24,6 +24,18 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     }
   }, [isLoading, isAuthenticated, router, pathname]);
 
+  // Auto-redirect user with mismatched role to their own portal to avoid getting stuck
+  React.useEffect(() => {
+    if (!isLoading && isAuthenticated && allowedRoles && role && !allowedRoles.includes(role)) {
+      const timer = setTimeout(() => {
+        if (role === "CLIENT") router.replace("/client/dashboard");
+        else if (role === "FREELANCER") router.replace("/freelancer/dashboard");
+        else if (role === "ADMIN") router.replace("/admin/dashboard");
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, isAuthenticated, allowedRoles, role, router]);
+
   if (isLoading) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-slate-500">
@@ -41,13 +53,17 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return (
       <div className="min-h-[65vh] flex items-center justify-center px-4 py-12">
         <div className="max-w-md w-full text-center p-8 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-card dark:shadow-none">
-          <div className="h-12 w-12 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 flex items-center justify-center mx-auto mb-4">
+          <div className="h-12 w-12 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 flex items-center justify-center mx-auto mb-4">
             <ShieldAlert className="h-6 w-6" />
           </div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Access Restricted</h2>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Redirecting to Your Workspace</h2>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-            Your account role (<span className="font-semibold text-slate-800 dark:text-slate-200">{role}</span>) does not have permission to view this section.
+            Your account is registered as a <span className="font-semibold text-slate-800 dark:text-slate-200">{role}</span>. We are redirecting you to your dedicated portal...
           </p>
+          <div className="mt-4 flex items-center justify-center gap-2 text-xs text-brand-600 dark:text-brand-400 font-medium">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Navigating automatically...</span>
+          </div>
           <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
             <Button
               variant="outline"

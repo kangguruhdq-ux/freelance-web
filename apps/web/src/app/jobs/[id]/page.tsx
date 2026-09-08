@@ -13,6 +13,9 @@ import {
   Send,
   User,
   CheckCircle,
+  CheckCircle2,
+  Loader2,
+  ExternalLink,
   FileText,
   Clock,
   Paperclip,
@@ -71,6 +74,11 @@ interface ProposalItem {
     mimeType: string;
     sizeBytes: number;
   }>;
+  contract?: {
+    id: string;
+    contractNumber: string;
+    status: string;
+  } | null;
 }
 
 export default function JobDetailPage() {
@@ -82,6 +90,7 @@ export default function JobDetailPage() {
   const [job, setJob] = React.useState<JobDetail | null>(null);
   const [proposals, setProposals] = React.useState<ProposalItem[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [hiringId, setHiringId] = React.useState<string | null>(null);
 
   // Proposal submission form state
   const [bidAmount, setBidAmount] = React.useState<string>("");
@@ -91,6 +100,26 @@ export default function JobDetailPage() {
   const [submitting, setSubmitting] = React.useState(false);
   const [proposalSuccess, setProposalSuccess] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState("");
+
+  const handleHireFreelancer = async (proposalId: string) => {
+    setHiringId(proposalId);
+    try {
+      const res = await apiFetch("/contracts", {
+        method: "POST",
+        body: JSON.stringify({ proposalId }),
+      });
+      if (res.success && res.contract?.id) {
+        router.push(`/contracts/${res.contract.id}`);
+      } else {
+        alert(res.error || "Failed to establish contract. Please try again.");
+      }
+    } catch (err: any) {
+      console.error("Failed to hire freelancer:", err);
+      alert(err.message || "Failed to establish contract");
+    } finally {
+      setHiringId(null);
+    }
+  };
 
   React.useEffect(() => {
     if (!jobId) return;
@@ -343,6 +372,54 @@ export default function JobDetailPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Client Owner Action Bar: Accept & Hire / Open Workspace */}
+                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Proposal Status:</span>
+                      <Badge
+                        variant={p.status === "ACCEPTED" ? "success" : p.status === "REJECTED" ? "destructive" : "warning"}
+                        className="text-xs font-bold uppercase"
+                      >
+                        {p.status}
+                      </Badge>
+                      {p.contract && (
+                        <span className="text-xs font-mono font-semibold text-slate-500 dark:text-slate-400">
+                          #{p.contract.contractNumber}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 justify-end">
+                      {p.contract ? (
+                        <Link href={`/contracts/${p.contract.id}`}>
+                          <Button size="sm" className="gap-1.5 font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            Open Project Workspace
+                          </Button>
+                        </Link>
+                      ) : p.status === "PENDING" ? (
+                        <Button
+                          size="sm"
+                          disabled={hiringId === p.id}
+                          onClick={() => handleHireFreelancer(p.id)}
+                          className="gap-2 font-bold text-xs bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20"
+                        >
+                          {hiringId === p.id ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              Establishing Contract...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="h-4 w-4" />
+                              Accept Proposal &amp; Hire
+                            </>
+                          )}
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
                 </Card>
               ))
             )}
@@ -366,9 +443,9 @@ export default function JobDetailPage() {
                 <p className="text-xs text-emerald-700 dark:text-emerald-400">
                   The client has received your bid, cover letter, and attached work samples. You can track this proposal in your dashboard.
                 </p>
-                <Link href="/freelancer/dashboard">
+                <Link href="/dashboard">
                   <Button variant="outline" size="sm" className="mt-3">
-                    View Freelancer Dashboard
+                    Go to My Dashboard
                   </Button>
                 </Link>
               </div>
