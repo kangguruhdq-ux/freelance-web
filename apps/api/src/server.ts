@@ -19,10 +19,21 @@ import reviewRoutes from "./routes/reviews.routes";
 import disputeRoutes from "./routes/disputes.routes";
 import reportRoutes from "./routes/reports.routes";
 
+import { authRateLimiter } from "./middleware/rate-limit.middleware";
+
 export const app = express();
 const PORT = process.env.API_PORT || 4000;
 
-// Security & Middleware
+// Security Headers Middleware
+app.use((_req: Request, res: Response, next: NextFunction) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  next();
+});
+
+// CORS & Middleware
 app.use(
   cors({
     origin: [
@@ -50,7 +61,8 @@ app.get("/health", (_req: Request, res: Response) => {
 });
 
 // Mounted Routes
-app.use("/auth", authRoutes);
+app.use("/auth", authRateLimiter, authRoutes);
+
 app.use("/users", userRoutes);
 app.use("/admin", adminRoutes);
 app.use("/jobs", jobRoutes);
