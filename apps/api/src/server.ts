@@ -14,6 +14,8 @@ import profileRoutes from "./routes/profiles.routes";
 import contractRoutes from "./routes/contracts.routes";
 import milestoneRoutes from "./routes/milestones.routes";
 import messageRoutes from "./routes/messages.routes";
+import paymentRoutes from "./routes/payments.routes";
+import reviewRoutes from "./routes/reviews.routes";
 
 export const app = express();
 const PORT = process.env.API_PORT || 4000;
@@ -55,6 +57,9 @@ app.use("/profiles", profileRoutes);
 app.use("/contracts", contractRoutes);
 app.use("/contracts", messageRoutes);
 app.use("/milestones", milestoneRoutes);
+app.use("/payments", paymentRoutes);
+app.use("/", reviewRoutes);
+
 
 
 

@@ -386,32 +386,109 @@ export default function ContractWorkspacePage() {
                       </Button>
                     )}
 
-                    {/* Client Review */}
-                    {isClient && milestone.status === "SUBMITTED" && (
+                    {/* Client Actions */}
+                    {isClient && (
                       <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={actionLoading}
-                          onClick={() => handleMilestoneAction(milestone.id, "revision")}
-                          className="font-semibold text-xs text-amber-700 border-amber-200"
-                        >
-                          Request Revision
-                        </Button>
-                        <Button
-                          size="sm"
-                          disabled={actionLoading}
-                          onClick={() => handleMilestoneAction(milestone.id, "approve")}
-                          className="font-semibold text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                        >
-                          Approve Milestone
-                        </Button>
+                        {milestone.status === "PENDING" && (
+                          <Button
+                            size="sm"
+                            disabled={actionLoading}
+                            onClick={async () => {
+                              setActionLoading(true);
+                              try {
+                                const res = await fetch(`/api/payments/milestones/${milestone.id}/fund`, { method: "POST" });
+                                const data = await res.json();
+                                setStatusFeedback(data.message || "Escrow funded");
+                                await fetchWorkspace();
+                              } catch (e: any) {
+                                setStatusFeedback(e.message);
+                              } finally {
+                                setActionLoading(false);
+                              }
+                            }}
+                            className="font-semibold text-xs bg-brand-600 hover:bg-brand-700 text-white"
+                          >
+                            Fund Escrow (${milestone.amount.toLocaleString()})
+                          </Button>
+                        )}
+
+                        {milestone.status === "SUBMITTED" && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={actionLoading}
+                              onClick={() => handleMilestoneAction(milestone.id, "revision")}
+                              className="font-semibold text-xs text-amber-700 border-amber-200"
+                            >
+                              Request Revision
+                            </Button>
+                            <Button
+                              size="sm"
+                              disabled={actionLoading}
+                              onClick={async () => {
+                                setActionLoading(true);
+                                try {
+                                  const res = await fetch(`/api/payments/milestones/${milestone.id}/release`, { method: "POST" });
+                                  const data = await res.json();
+                                  setStatusFeedback(data.message || "Payment released");
+                                  await fetchWorkspace();
+                                } catch (e: any) {
+                                  setStatusFeedback(e.message);
+                                } finally {
+                                  setActionLoading(false);
+                                }
+                              }}
+                              className="font-semibold text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                            >
+                              Release Payment (${milestone.amount.toLocaleString()})
+                            </Button>
+                          </>
+                        )}
                       </>
                     )}
                   </div>
                 </div>
               </Card>
             ))}
+
+            {/* Review Section when COMPLETED */}
+            {workspace.status === "COMPLETED" && (
+              <Card className="p-6 bg-emerald-50/60 border border-emerald-200 shadow-card space-y-4">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                  <h3 className="text-base font-bold text-slate-900">Project Completed &amp; Escrow Released</h3>
+                </div>
+                <p className="text-xs text-slate-600">
+                  All deliverables have been finalized and funds released. Leave a verified feedback review to endorse your counterparty.
+                </p>
+                <div className="pt-2">
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      const comment = prompt("Enter your verified review comment (minimum 10 characters):");
+                      if (!comment || comment.length < 10) return;
+                      const rating = prompt("Enter rating score (1 to 5):", "5");
+                      if (!rating) return;
+                      try {
+                        const res = await fetch(`/api/contracts/${workspace.id}/reviews`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ rating: parseInt(rating, 10), comment }),
+                        });
+                        const json = await res.json();
+                        alert(json.message || json.error);
+                      } catch (e: any) {
+                        alert(e.message);
+                      }
+                    }}
+                    className="font-semibold text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    Submit Verified Review
+                  </Button>
+                </div>
+              </Card>
+            )}
           </div>
         )}
 
