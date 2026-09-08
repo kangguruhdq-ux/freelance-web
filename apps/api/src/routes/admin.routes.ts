@@ -850,8 +850,8 @@ router.get("/contracts", async (req: Request, res: Response): Promise<void> => {
         take,
         orderBy: { createdAt: "desc" },
         include: {
-          client: { select: { id: true, name: true, email: true } },
-          freelancer: { select: { id: true, name: true, email: true } },
+          client: { select: { id: true, name: true, email: true, avatarUrl: true } },
+          freelancer: { select: { id: true, name: true, email: true, avatarUrl: true } },
           _count: { select: { milestones: true } },
         },
       }),
@@ -891,7 +891,10 @@ router.get("/contracts/:id", async (req: Request, res: Response): Promise<void> 
         client: { select: { id: true, name: true, email: true, avatarUrl: true } },
         freelancer: { select: { id: true, name: true, email: true, avatarUrl: true } },
         job: { select: { id: true, title: true, description: true } },
-        milestones: { orderBy: { createdAt: "asc" } },
+        milestones: {
+          orderBy: { createdAt: "asc" },
+          include: { attachments: true },
+        },
       },
     });
 
@@ -906,9 +909,16 @@ router.get("/contracts/:id", async (req: Request, res: Response): Promise<void> 
         ...contract,
         totalAmount: Number(contract.totalAmount),
         escrowBalance: Number(contract.escrowBalance),
-        milestones: contract.milestones.map((m) => ({
+        milestones: contract.milestones.map((m: any) => ({
           ...m,
           amount: Number(m.amount),
+          attachments: (m.attachments || []).map((att: any) => ({
+            id: att.id,
+            fileName: att.fileName,
+            fileUrl: att.fileUrl,
+            mimeType: att.mimeType,
+            sizeBytes: att.sizeBytes,
+          })),
         })),
       },
     });

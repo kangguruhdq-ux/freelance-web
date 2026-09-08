@@ -24,6 +24,12 @@ import {
   Briefcase,
   Paperclip,
   ArrowDown,
+  MoreVertical,
+  Ban,
+  Download,
+  Copy,
+  Pencil,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +38,12 @@ import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/ui/avatar";
 import { ChatMessageItem, ChatMessageData, ChatAttachment } from "@/components/chat/chat-message-item";
 import { TypingIndicator } from "@/components/chat/typing-indicator";
+import {
+  FileAttachmentUpload,
+  AttachedFile,
+  getFileIcon,
+  formatFileSize,
+} from "@/components/ui/file-attachment-upload";
 import { useToast } from "@/context/toast-context";
 import { apiFetch } from "@/lib/api-client";
 
@@ -44,6 +56,14 @@ interface Milestone {
   dueDate: string | null;
   submittedAt: string | null;
   approvedAt: string | null;
+  attachments?: Array<{
+    id: string;
+    fileName: string;
+    fileUrl: string;
+    mimeType?: string;
+    sizeBytes?: number;
+    createdAt?: string;
+  }>;
 }
 
 interface ContractWorkspace {
@@ -80,15 +100,16 @@ interface ContractWorkspace {
   milestones: Milestone[];
 }
 
-interface WorkspaceMessage {
-  id: string;
-  content: string;
-  senderId: string;
-  senderName: string;
-  senderAvatar: string | null;
-  senderRole: string;
-  isSender: boolean;
-  createdAt: string;
+function parseMilestoneDescription(desc: string | null) {
+  if (!desc) return { notes: "", workUrl: null };
+  const urlRegex = /(?:🔗 Work URL:\s*|🔗 Link:\s*|URL:\s*)?(https?:\/\/[^\s]+)/i;
+  const match = desc.match(urlRegex);
+  if (match) {
+    const workUrl = match[1];
+    const notes = desc.replace(match[0], "").trim();
+    return { notes, workUrl };
+  }
+  return { notes: desc, workUrl: null };
 }
 
 export default function ContractWorkspacePage() {
@@ -110,11 +131,26 @@ export default function ContractWorkspacePage() {
   const [typingUsers, setTypingUsers] = React.useState<Array<{ userId: string; name: string; avatarUrl?: string | null }>>([]);
   const [showScrollBottom, setShowScrollBottom] = React.useState(false);
 
+  // WhatsApp-style chat features: block, edit, menu
+  const [chatMenuOpen, setChatMenuOpen] = React.useState(false);
+  const [editingMessage, setEditingMessage] = React.useState<ChatMessageData | null>(null);
+  const [blockStatus, setBlockStatus] = React.useState<{
+    isBlockedByMe: boolean;
+    isBlockedByThem: boolean;
+    isBlocked: boolean;
+  }>({
+    isBlockedByMe: false,
+    isBlockedByThem: false,
+    isBlocked: false,
+  });
+  const [blockLoading, setBlockLoading] = React.useState(false);
+
   // Deliverables Modal state
   const [submitModalOpen, setSubmitModalOpen] = React.useState(false);
   const [selectedMilestoneId, setSelectedMilestoneId] = React.useState<string>("");
   const [deliverableNotes, setDeliverableNotes] = React.useState("");
   const [workUrl, setWorkUrl] = React.useState("");
+  const [deliverableFiles, setDeliverableFiles] = React.useState<AttachedFile[]>([]);
   const [submittingDeliverable, setSubmittingDeliverable] = React.useState(false);
 
   // Milestone action feedback
@@ -184,6 +220,9 @@ export default function ContractWorkspacePage() {
         if (Array.isArray(res.typingUsers)) {
           setTypingUsers(res.typingUsers);
         }
+        if (res.blockStatus) {
+          setBlockStatus(res.blockStatus);
+        }
       }
     } catch (err) {
       console.error("Failed to load messages:", err);
@@ -212,10 +251,75 @@ export default function ContractWorkspacePage() {
 
   // Handle typing activity signal
   const handleTypingActivity = () => {
+    if (blockStatus.isBlocked) return;
     const now = Date.now();
     if (now - lastTypingPingRef.current > 2500) {
       lastTypingPingRef.current = now;
       apiFetch(`/contracts/${contractId}/typing`, { method: "POST" }).catch(() => {});
+    }
+  };
+
+  // WhatsApp Block / Unblock Contact
+  const handleToggleBlock = async () => {
+    if (!contractId || blockLoading) return;
+    setBlockLoading(true);
+    setChatMenuOpen(false);
+    try {
+      const endpoint = blockStatus.isBlockedByMe ? `/contracts/${contractId}/unblock` : `/contracts/${contractId}/block`;
+      const res = await apiFetch(endpoint, { method: "POST" });
+      if (res.success) {
+        toast.success(res.message || (blockStatus.isBlockedByMe ? "Contact unblocked." : "Contact blocked."));
+        if (res.blockStatus) {
+          setBlockStatus(res.blockStatus);
+        } else {
+          setBlockStatus((prev) => ({
+            ...prev,
+            isBlockedByMe: !prev.isBlockedByMe,
+            isBlocked: !prev.isBlockedByMe || prev.isBlockedByThem,
+          }));
+        }
+      } else {
+        toast.error(res.error || "Failed to update block status.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to toggle block.");
+    } finally {
+      setBlockLoading(false);
+    }
+  };
+
+  // WhatsApp Message Edit Handlers
+  const handleStartEdit = (msg: ChatMessageData) => {
+    setEditingMessage(msg);
+    setNewMessage(msg.content);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessage(null);
+    setNewMessage("");
+  };
+
+  // WhatsApp Message Delete Handler (retract)
+  const handleDeleteMessage = async (msg: ChatMessageData) => {
+    if (!contractId) return;
+    try {
+      const res = await apiFetch(`/contracts/${contractId}/messages/${msg.id}`, {
+        method: "DELETE",
+      });
+      if (res.success) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === msg.id
+              ? { ...m, content: "This message was deleted", isDeleted: true, attachments: [] }
+              : m
+          )
+        );
+        toast.success("Message deleted");
+      } else {
+        toast.error(res.error || "Failed to delete message");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete message");
     }
   };
 
@@ -272,7 +376,40 @@ export default function ContractWorkspacePage() {
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (blockStatus.isBlocked) {
+      toast.error("Messaging is disabled because communication is blocked.");
+      return;
+    }
+
     const trimmed = newMessage.trim();
+
+    // If editing existing message
+    if (editingMessage) {
+      if (!trimmed || sendingMessage) return;
+      setSendingMessage(true);
+      try {
+        const res = await apiFetch(`/contracts/${contractId}/messages/${editingMessage.id}`, {
+          method: "PUT",
+          body: JSON.stringify({ content: trimmed }),
+        });
+        if (res.success && res.message) {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === editingMessage.id ? { ...m, content: trimmed, isEdited: true } : m))
+          );
+          setEditingMessage(null);
+          setNewMessage("");
+          toast.success("Message edited");
+        } else {
+          toast.error(res.error || "Failed to edit message");
+        }
+      } catch (err: any) {
+        toast.error(err.message || "Failed to edit message");
+      } finally {
+        setSendingMessage(false);
+      }
+      return;
+    }
+
     if ((!trimmed && chatAttachments.length === 0) || sendingMessage) return;
 
     const content = trimmed;
@@ -353,6 +490,12 @@ export default function ContractWorkspacePage() {
         body: JSON.stringify({
           deliverableNotes: deliverableNotes.trim() || undefined,
           workUrl: workUrl.trim() || undefined,
+          files: deliverableFiles.map((f) => ({
+            fileName: f.fileName,
+            fileUrl: f.fileUrl,
+            mimeType: f.mimeType,
+            sizeBytes: f.sizeBytes,
+          })),
         }),
       });
 
@@ -364,6 +507,7 @@ export default function ContractWorkspacePage() {
         setSubmitModalOpen(false);
         setDeliverableNotes("");
         setWorkUrl("");
+        setDeliverableFiles([]);
         await fetchWorkspace();
         await fetchMessages();
       } else {
@@ -719,11 +863,92 @@ export default function ContractWorkspacePage() {
                       <h3 className="text-base font-bold text-slate-900 dark:text-white">
                         {milestone.title}
                       </h3>
-                      {milestone.description && (
-                        <p className="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-line leading-relaxed">
-                          {milestone.description}
-                        </p>
-                      )}
+
+                      {(() => {
+                        const { notes, workUrl } = parseMilestoneDescription(milestone.description);
+                        const hasAttachments = milestone.attachments && milestone.attachments.length > 0;
+                        const isSubmittedOrApproved = milestone.status === "SUBMITTED" || milestone.status === "APPROVED";
+
+                        return (
+                          <div className="space-y-3 pt-1">
+                            {/* Scope Description */}
+                            {notes && (
+                              <p className="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-line leading-relaxed">
+                                {notes}
+                              </p>
+                            )}
+
+                            {/* Prominent Deliverable Showcase */}
+                            {(isSubmittedOrApproved || workUrl || hasAttachments) && (
+                              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/90 dark:border-slate-700/80 space-y-3 mt-2">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <UploadCloud className="h-4 w-4 text-brand-600 dark:text-brand-400" />
+                                    <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                                      Project Deliverables &amp; Proof of Work
+                                    </span>
+                                  </div>
+                                  {milestone.submittedAt && (
+                                    <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">
+                                      Submitted {new Date(milestone.submittedAt).toLocaleDateString()}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Live Project / Demo Link */}
+                                {workUrl && (
+                                  <div>
+                                    <a
+                                      href={workUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-xs hover:shadow-md transition group"
+                                    >
+                                      <ExternalLink className="h-4 w-4 shrink-0 group-hover:scale-110 transition-transform" />
+                                      <span className="truncate">View Live Project Demo / Repository</span>
+                                    </a>
+                                  </div>
+                                )}
+
+                                {/* Attached Deliverable Files */}
+                                {hasAttachments && (
+                                  <div className="space-y-1.5 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                                    <p className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                      <Paperclip className="h-3.5 w-3.5 text-brand-500" />
+                                      <span>Attached Files ({milestone.attachments!.length}):</span>
+                                    </p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                      {milestone.attachments!.map((file) => (
+                                        <a
+                                          key={file.id}
+                                          href={file.fileUrl}
+                                          download={file.fileName}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200 transition group shadow-2xs"
+                                        >
+                                          <div className="flex items-center gap-2 min-w-0 pr-1">
+                                            {getFileIcon(file.mimeType || "", file.fileName)}
+                                            <span className="truncate font-medium group-hover:text-brand-600 dark:group-hover:text-brand-400">
+                                              {file.fileName}
+                                            </span>
+                                            {file.sizeBytes ? (
+                                              <span className="text-[10px] text-slate-400 shrink-0">
+                                                ({formatFileSize(file.sizeBytes)})
+                                              </span>
+                                            ) : null}
+                                          </div>
+                                          <Download className="h-3.5 w-3.5 shrink-0 text-slate-400 group-hover:text-brand-600 transition" />
+                                        </a>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     <div className="sm:text-right shrink-0">
@@ -883,8 +1108,8 @@ export default function ContractWorkspacePage() {
           {/* RIGHT COLUMN: Live Project Chat (5 cols) */}
           <div className="lg:col-span-5 sticky top-20">
             <Card className="p-0 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-card dark:shadow-none flex flex-col h-[650px] overflow-hidden relative">
-              {/* Chat Header */}
-              <div className="p-3.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 flex items-center justify-between">
+              {/* WhatsApp-Style Chat Header */}
+              <div className="p-3.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 flex items-center justify-between relative z-20">
                 <div className="flex items-center gap-2.5">
                   <Avatar
                     src={isClient ? workspace.freelancer.avatarUrl : workspace.client.avatarUrl}
@@ -902,9 +1127,74 @@ export default function ContractWorkspacePage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200/50 dark:border-emerald-800/50">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[9px] font-bold">Active</span>
+                <div className="flex items-center gap-2 relative">
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200/50 dark:border-emerald-800/50">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[9px] font-bold">Active</span>
+                  </div>
+
+                  {/* WhatsApp 3-dots dropdown menu button */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setChatMenuOpen((prev) => !prev)}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition"
+                      title="Chat options"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+
+                    {chatMenuOpen && (
+                      <div className="absolute right-0 top-8 w-48 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl py-1 z-30 text-xs animate-in fade-in zoom-in-95 duration-150">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(workspace.contractNumber);
+                            toast.success("Contract number copied to clipboard!");
+                            setChatMenuOpen(false);
+                          }}
+                          className="w-full text-left px-3.5 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-2"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          <span>Copy Contract #</span>
+                        </button>
+
+                        <Link
+                          href={isClient ? `/freelancers/${workspace.freelancer.id}` : `/clients/${workspace.client.id}`}
+                          onClick={() => setChatMenuOpen(false)}
+                          className="w-full text-left px-3.5 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-2"
+                        >
+                          <User className="h-3.5 w-3.5" />
+                          <span>View Profile</span>
+                        </Link>
+
+                        <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
+
+                        <button
+                          type="button"
+                          disabled={blockLoading}
+                          onClick={handleToggleBlock}
+                          className={`w-full text-left px-3.5 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 ${
+                            blockStatus.isBlockedByMe
+                              ? "text-emerald-600 dark:text-emerald-400 font-semibold"
+                              : "text-rose-600 dark:text-rose-400 font-semibold"
+                          }`}
+                        >
+                          {blockStatus.isBlockedByMe ? (
+                            <>
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              <span>Unblock {isClient ? "Freelancer" : "Client"}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Ban className="h-3.5 w-3.5" />
+                              <span>Block {isClient ? "Freelancer" : "Client"}</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -944,6 +1234,8 @@ export default function ContractWorkspacePage() {
                         isFirstInGroup={isFirstInGroup}
                         isLastInGroup={isLastInGroup}
                         onRetry={handleRetryMessage}
+                        onEdit={handleStartEdit}
+                        onDelete={handleDeleteMessage}
                       />
                     );
                   })
@@ -966,8 +1258,55 @@ export default function ContractWorkspacePage() {
                 </button>
               )}
 
+              {/* Editing Banner */}
+              {editingMessage && (
+                <div className="px-3.5 py-2 bg-amber-50 dark:bg-amber-950/50 border-t border-amber-200 dark:border-amber-800 flex items-center justify-between text-xs animate-in fade-in duration-150">
+                  <div className="flex items-center gap-2 min-w-0 pr-2">
+                    <Pencil className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span className="font-bold text-amber-900 dark:text-amber-200 text-[11px]">Editing message:</span>
+                    <span className="text-amber-700 dark:text-amber-300 truncate text-[11px]">
+                      &quot;{editingMessage.content}&quot;
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="p-1 rounded text-amber-700 hover:text-amber-900 dark:text-amber-300 dark:hover:text-white"
+                    title="Cancel edit"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+
+              {/* WhatsApp Blocked Warning Banner */}
+              {blockStatus.isBlocked && (
+                <div className="px-3.5 py-2.5 bg-rose-50 dark:bg-rose-950/60 border-t border-rose-200 dark:border-rose-800 flex items-center justify-between text-xs text-rose-800 dark:text-rose-200">
+                  <div className="flex items-center gap-2 min-w-0 pr-2">
+                    <Ban className="h-4 w-4 shrink-0 text-rose-500" />
+                    <span className="text-[11px] font-semibold">
+                      {blockStatus.isBlockedByMe
+                        ? "You have blocked this contact. Unblock to resume messaging."
+                        : "You cannot send messages because communication has been blocked."}
+                    </span>
+                  </div>
+                  {blockStatus.isBlockedByMe && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={blockLoading}
+                      onClick={handleToggleBlock}
+                      className="h-6 px-2 text-[10px] font-bold text-rose-700 border-rose-300 hover:bg-rose-100 dark:text-rose-200 dark:border-rose-700"
+                    >
+                      Unblock
+                    </Button>
+                  )}
+                </div>
+              )}
+
               {/* Attachment Preview Chips */}
-              {chatAttachments.length > 0 && (
+              {chatAttachments.length > 0 && !blockStatus.isBlocked && (
                 <div className="px-3 pt-2 pb-1 bg-slate-100/90 dark:bg-slate-800/90 border-t border-slate-200/80 dark:border-slate-700 flex flex-wrap gap-1.5">
                   {chatAttachments.map((att, i) => (
                     <span
@@ -998,6 +1337,7 @@ export default function ContractWorkspacePage() {
                   ref={fileInputRef}
                   onChange={handleFileSelect}
                   multiple
+                  disabled={blockStatus.isBlocked}
                   className="hidden"
                   accept="image/*,application/pdf,.doc,.docx,.zip,.txt"
                 />
@@ -1006,6 +1346,7 @@ export default function ContractWorkspacePage() {
                   type="button"
                   variant="ghost"
                   size="sm"
+                  disabled={blockStatus.isBlocked}
                   onClick={() => fileInputRef.current?.click()}
                   className="h-9 w-9 p-0 text-slate-500 hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-400 shrink-0 rounded-xl"
                   title="Attach files (max 3MB)"
@@ -1015,25 +1356,50 @@ export default function ContractWorkspacePage() {
 
                 <textarea
                   rows={1}
-                  placeholder="Type a message... (Enter to send, Shift+Enter for newline)"
-                  className="flex-1 min-h-[38px] max-h-24 p-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-brand-500 resize-none leading-relaxed transition-all"
+                  placeholder={
+                    blockStatus.isBlocked
+                      ? "Messaging is disabled (blocked)"
+                      : editingMessage
+                      ? "Edit your message... (Enter to update, Esc or cancel button to discard)"
+                      : "Type a message... (Enter to send, Shift+Enter for newline)"
+                  }
+                  className="flex-1 min-h-[38px] max-h-24 p-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-brand-500 resize-none leading-relaxed transition-all disabled:opacity-50"
                   value={newMessage}
                   onChange={(e) => {
                     setNewMessage(e.target.value);
                     handleTypingActivity();
                   }}
-                  onKeyDown={handleKeyDown}
-                  disabled={sendingMessage}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape" && editingMessage) {
+                      handleCancelEdit();
+                    } else {
+                      handleKeyDown(e);
+                    }
+                  }}
+                  disabled={sendingMessage || blockStatus.isBlocked}
                 />
 
                 <Button
                   type="submit"
                   size="sm"
-                  disabled={sendingMessage || (!newMessage.trim() && chatAttachments.length === 0)}
+                  disabled={
+                    blockStatus.isBlocked ||
+                    sendingMessage ||
+                    (!newMessage.trim() && chatAttachments.length === 0)
+                  }
                   className="gap-1.5 font-bold text-xs h-9 px-3.5 shrink-0 shadow-xs bg-brand-600 hover:bg-brand-700 text-white rounded-xl transition-all"
                 >
-                  <Send className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Send</span>
+                  {editingMessage ? (
+                    <>
+                      <Check className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Save</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Send</span>
+                    </>
+                  )}
                 </Button>
               </form>
             </Card>
@@ -1128,6 +1494,19 @@ export default function ContractWorkspacePage() {
                 </div>
               </div>
 
+              {/* Attached Deliverable Files */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                  <span>Attach Deliverable Files</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Optional (ZIP, PDF, DOC, Images, max 10MB each)</span>
+                </label>
+                <FileAttachmentUpload
+                  attachments={deliverableFiles}
+                  onChange={setDeliverableFiles}
+                  maxFiles={5}
+                />
+              </div>
+
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-[11px] text-slate-600 dark:text-slate-300 space-y-1">
                 <p className="font-semibold text-slate-800 dark:text-slate-200">
                   🛡️ Escrow Guarantee:
@@ -1151,7 +1530,10 @@ export default function ContractWorkspacePage() {
                 <Button
                   type="submit"
                   size="sm"
-                  disabled={submittingDeliverable || !deliverableNotes.trim()}
+                  disabled={
+                    submittingDeliverable ||
+                    (!deliverableNotes.trim() && !workUrl.trim() && deliverableFiles.length === 0)
+                  }
                   className="gap-1.5 font-bold text-xs bg-brand-600 hover:bg-brand-700 text-white shadow-md"
                 >
                   {submittingDeliverable ? (

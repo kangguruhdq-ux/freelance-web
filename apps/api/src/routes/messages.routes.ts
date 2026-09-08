@@ -8,6 +8,13 @@ const router = Router({ mergeParams: true });
 // In-memory typing tracker: contractId -> Map of userId -> { name, avatarUrl, lastTypedAt }
 const typingState = new Map<string, Map<string, { name: string; avatarUrl: string | null; lastTypedAt: number }>>();
 
+// In-memory block tracker: blockerUserId -> Set of blockedUserIds
+const blockedContacts = new Map<string, Set<string>>();
+
+function isUserBlocked(blockerId: string, blockedId: string): boolean {
+  return blockedContacts.get(blockerId)?.has(blockedId) || false;
+}
+
 // Helper to clean and get active typing users for a contract
 function getActiveTypingUsers(contractId: string, currentUserId: string) {
   const contractTyping = typingState.get(contractId);
@@ -116,6 +123,10 @@ router.get("/:id/messages", authenticate, async (req: Request, res: Response): P
       return;
     }
 
+    const recipientId = contract.clientId === userId ? contract.freelancerId : contract.clientId;
+    const isBlockedByMe = isUserBlocked(userId, recipientId);
+    const isBlockedByThem = isUserBlocked(recipientId, userId);
+
     const conversationId = await getOrCreateContractConversation(contract.clientId, contract.freelancerId);
 
     const messages = await prisma.message.findMany({
@@ -131,17 +142,24 @@ router.get("/:id/messages", authenticate, async (req: Request, res: Response): P
       },
     });
 
-    const formatted = messages.map((m) => ({
-      id: m.id,
-      content: m.content,
-      senderId: m.senderId,
-      senderName: m.sender.name,
-      senderAvatar: m.sender.avatarUrl,
-      senderRole: m.sender.role,
-      isSender: m.senderId === userId,
-      createdAt: m.createdAt.toISOString(),
-      attachments: m.attachments,
-    }));
+    const formatted = messages.map((m) => {
+      const isDeleted = m.content === "This message was deleted";
+      const isEdited = !isDeleted && (m.updatedAt.getTime() - m.createdAt.getTime() > 1000);
+      return {
+        id: m.id,
+        content: m.content,
+        senderId: m.senderId,
+        senderName: m.sender.name,
+        senderAvatar: m.sender.avatarUrl,
+        senderRole: m.sender.role,
+        isSender: m.senderId === userId,
+        isDeleted,
+        isEdited,
+        createdAt: m.createdAt.toISOString(),
+        updatedAt: m.updatedAt.toISOString(),
+        attachments: isDeleted ? [] : m.attachments,
+      };
+    });
 
     const typingUsers = getActiveTypingUsers(id, userId);
 
@@ -149,6 +167,11 @@ router.get("/:id/messages", authenticate, async (req: Request, res: Response): P
       success: true,
       data: formatted,
       typingUsers,
+      blockStatus: {
+        isBlockedByMe,
+        isBlockedByThem,
+        isBlocked: isBlockedByMe || isBlockedByThem,
+      },
     });
   } catch (error) {
     console.error("Fetch messages error:", error);
@@ -193,6 +216,23 @@ router.post("/:id/messages", authenticate, async (req: Request, res: Response): 
       return;
     }
 
+    // Block verification
+    const recipientId = contract.clientId === userId ? contract.freelancerId : contract.clientId;
+    if (isUserBlocked(userId, recipientId)) {
+      res.status(403).json({
+        success: false,
+        error: "You have blocked this contact. Unblock to send messages.",
+      });
+      return;
+    }
+    if (isUserBlocked(recipientId, userId)) {
+      res.status(403).json({
+        success: false,
+        error: "You cannot send messages because you have been blocked by this user.",
+      });
+      return;
+    }
+
     const conversationId = await getOrCreateContractConversation(contract.clientId, contract.freelancerId);
 
     const message = await prisma.message.create({
@@ -230,7 +270,6 @@ router.post("/:id/messages", authenticate, async (req: Request, res: Response): 
     }
 
     // Dispatch in-app notification to the counterparty
-    const recipientId = contract.clientId === userId ? contract.freelancerId : contract.clientId;
     const snippet = (content || "").trim().substring(0, 70);
     const notifText = snippet.length > 0 ? snippet : "Sent an attachment";
 
@@ -253,13 +292,204 @@ router.post("/:id/messages", authenticate, async (req: Request, res: Response): 
         senderAvatar: message.sender.avatarUrl,
         senderRole: message.sender.role,
         isSender: true,
+        isDeleted: false,
+        isEdited: false,
         createdAt: message.createdAt.toISOString(),
+        updatedAt: message.updatedAt.toISOString(),
         attachments: message.attachments,
       },
     });
   } catch (error) {
     console.error("Send message error:", error);
     res.status(500).json({ success: false, error: "Failed to send message" });
+  }
+});
+
+// PUT /contracts/:id/messages/:messageId — Edit message
+router.put("/:id/messages/:messageId", authenticate, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const messageId = Array.isArray(req.params.messageId) ? req.params.messageId[0] : req.params.messageId;
+    const { content } = req.body;
+    const userId = req.user!.id;
+
+    if (!content || typeof content !== "string" || !content.trim()) {
+      res.status(400).json({ success: false, error: "Message content cannot be empty." });
+      return;
+    }
+
+    const message = await prisma.message.findUnique({
+      where: { id: messageId },
+    });
+
+    if (!message) {
+      res.status(404).json({ success: false, error: "Message not found" });
+      return;
+    }
+
+    if (message.senderId !== userId && req.user!.role !== "ADMIN") {
+      res.status(403).json({ success: false, error: "You can only edit your own messages." });
+      return;
+    }
+
+    if (message.content === "This message was deleted") {
+      res.status(400).json({ success: false, error: "Deleted messages cannot be edited." });
+      return;
+    }
+
+    const updated = await prisma.message.update({
+      where: { id: messageId },
+      data: {
+        content: content.trim(),
+        updatedAt: new Date(),
+      },
+      include: {
+        sender: {
+          select: { id: true, name: true, avatarUrl: true, role: true },
+        },
+        attachments: {
+          select: { id: true, fileName: true, fileUrl: true, mimeType: true, sizeBytes: true },
+        },
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: {
+        id: updated.id,
+        content: updated.content,
+        senderId: updated.senderId,
+        senderName: updated.sender.name,
+        senderAvatar: updated.sender.avatarUrl,
+        senderRole: updated.sender.role,
+        isSender: updated.senderId === userId,
+        isDeleted: false,
+        isEdited: true,
+        createdAt: updated.createdAt.toISOString(),
+        updatedAt: updated.updatedAt.toISOString(),
+        attachments: updated.attachments,
+      },
+    });
+  } catch (error) {
+    console.error("Edit message error:", error);
+    res.status(500).json({ success: false, error: "Failed to edit message" });
+  }
+});
+
+// DELETE /contracts/:id/messages/:messageId — Delete message (WhatsApp retract style)
+router.delete("/:id/messages/:messageId", authenticate, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const messageId = Array.isArray(req.params.messageId) ? req.params.messageId[0] : req.params.messageId;
+    const userId = req.user!.id;
+
+    const message = await prisma.message.findUnique({
+      where: { id: messageId },
+    });
+
+    if (!message) {
+      res.status(404).json({ success: false, error: "Message not found" });
+      return;
+    }
+
+    if (message.senderId !== userId && req.user!.role !== "ADMIN") {
+      res.status(403).json({ success: false, error: "You can only delete your own messages." });
+      return;
+    }
+
+    // Remove any attachments linked to this message
+    await prisma.attachment.deleteMany({
+      where: { messageId },
+    });
+
+    // Retract message content WhatsApp style
+    const updated = await prisma.message.update({
+      where: { id: messageId },
+      data: {
+        content: "This message was deleted",
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      messageId: updated.id,
+      content: updated.content,
+      isDeleted: true,
+    });
+  } catch (error) {
+    console.error("Delete message error:", error);
+    res.status(500).json({ success: false, error: "Failed to delete message" });
+  }
+});
+
+// POST /contracts/:id/block — Block counterparty
+router.post("/:id/block", authenticate, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const userId = req.user!.id;
+
+    const contract = await prisma.contract.findUnique({
+      where: { id },
+      select: { clientId: true, freelancerId: true },
+    });
+
+    if (!contract) {
+      res.status(404).json({ success: false, error: "Contract not found" });
+      return;
+    }
+
+    const recipientId = contract.clientId === userId ? contract.freelancerId : contract.clientId;
+    if (!blockedContacts.has(userId)) {
+      blockedContacts.set(userId, new Set());
+    }
+    blockedContacts.get(userId)!.add(recipientId);
+
+    res.status(200).json({
+      success: true,
+      message: "Contact blocked successfully.",
+      blockStatus: {
+        isBlockedByMe: true,
+        isBlockedByThem: isUserBlocked(recipientId, userId),
+        isBlocked: true,
+      },
+    });
+  } catch (error) {
+    console.error("Block contact error:", error);
+    res.status(500).json({ success: false, error: "Failed to block contact" });
+  }
+});
+
+// POST /contracts/:id/unblock — Unblock counterparty
+router.post("/:id/unblock", authenticate, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const userId = req.user!.id;
+
+    const contract = await prisma.contract.findUnique({
+      where: { id },
+      select: { clientId: true, freelancerId: true },
+    });
+
+    if (!contract) {
+      res.status(404).json({ success: false, error: "Contract not found" });
+      return;
+    }
+
+    const recipientId = contract.clientId === userId ? contract.freelancerId : contract.clientId;
+    if (blockedContacts.has(userId)) {
+      blockedContacts.get(userId)!.delete(recipientId);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Contact unblocked successfully.",
+      blockStatus: {
+        isBlockedByMe: false,
+        isBlockedByThem: isUserBlocked(recipientId, userId),
+        isBlocked: isUserBlocked(recipientId, userId),
+      },
+    });
+  } catch (error) {
+    console.error("Unblock contact error:", error);
+    res.status(500).json({ success: false, error: "Failed to unblock contact" });
   }
 });
 

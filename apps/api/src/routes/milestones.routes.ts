@@ -84,16 +84,46 @@ router.post("/:id/submit", authenticate, async (req: Request, res: Response): Pr
       return;
     }
 
-    const { deliverableNotes, workUrl } = req.body || {};
+    const { deliverableNotes, workUrl, files } = req.body || {};
+
+    const cleanNotes = (deliverableNotes || "").trim();
+    const cleanUrl = (workUrl || "").trim();
+    let combinedDesc = cleanNotes;
+    if (cleanUrl) {
+      combinedDesc = combinedDesc
+        ? `${combinedDesc}\n\n🔗 Work URL: ${cleanUrl}`
+        : `🔗 Work URL: ${cleanUrl}`;
+    }
 
     const updated = await prisma.milestone.update({
       where: { id },
       data: {
         status: "SUBMITTED",
         submittedAt: new Date(),
-        ...(deliverableNotes ? { description: deliverableNotes } : {}),
+        ...(combinedDesc ? { description: combinedDesc } : {}),
       },
     });
+
+    // Save uploaded files as attachments for milestone
+    const createdAttachments: any[] = [];
+    if (Array.isArray(files) && files.length > 0) {
+      for (const f of files) {
+        if (f.fileUrl) {
+          const att = await prisma.attachment.create({
+            data: {
+              fileName: f.fileName || "deliverable-file",
+              fileUrl: f.fileUrl,
+              mimeType: f.mimeType || "application/octet-stream",
+              sizeBytes: Number(f.sizeBytes) || 0,
+              uploaderId: req.user!.id,
+              contractId: milestone.contractId,
+              milestoneId: milestone.id,
+            },
+          });
+          createdAttachments.push(att);
+        }
+      }
+    }
 
     // Auto-post deliverable notification to conversation
     try {
@@ -109,13 +139,30 @@ router.post("/:id/submit", authenticate, async (req: Request, res: Response): Pr
           },
         });
         if (shared) {
-          const noteText = deliverableNotes ? `\n\n📝 Notes: ${deliverableNotes}` : "";
-          const urlText = workUrl ? `\n🔗 Link: ${workUrl}` : "";
+          const noteText = cleanNotes ? `\n\n📝 Notes: ${cleanNotes}` : "";
+          const urlText = cleanUrl ? `\n🔗 Link: ${cleanUrl}` : "";
+          const fileText =
+            createdAttachments.length > 0
+              ? `\n📎 Files: ${createdAttachments.length} deliverable file(s) attached`
+              : "";
           await prisma.message.create({
             data: {
               conversationId: shared.conversationId,
               senderId: req.user!.id,
-              content: `🚀 Deliverable submitted for "${milestone.title}"!${noteText}${urlText}`,
+              content: `🚀 Deliverable submitted for "${milestone.title}"!${noteText}${urlText}${fileText}`,
+              attachments:
+                createdAttachments.length > 0
+                  ? {
+                      create: createdAttachments.map((att) => ({
+                        fileName: att.fileName,
+                        fileUrl: att.fileUrl,
+                        mimeType: att.mimeType,
+                        sizeBytes: att.sizeBytes,
+                        uploaderId: req.user!.id,
+                        contractId: milestone.contractId,
+                      })),
+                    }
+                  : undefined,
             },
           });
         }
@@ -141,6 +188,8 @@ router.post("/:id/submit", authenticate, async (req: Request, res: Response): Pr
         id: updated.id,
         status: updated.status,
         submittedAt: updated.submittedAt,
+        description: updated.description,
+        attachments: createdAttachments,
       },
     });
   } catch (error) {

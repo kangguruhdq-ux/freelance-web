@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Avatar } from "@/components/ui/avatar";
 import { apiFetch } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/utils";
 
@@ -230,10 +231,19 @@ export default function AdminProposalsPage() {
                 proposals.map((p) => (
                   <tr key={p.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
                     <td className="px-5 py-3.5">
-                      <p className="font-bold text-slate-900 dark:text-slate-100 truncate">
-                        {p.freelancer.name}
-                      </p>
-                      <p className="text-[11px] text-slate-400 truncate">{p.freelancer.email}</p>
+                      <div className="flex items-center gap-2">
+                        <Avatar
+                          src={p.freelancer.avatarUrl}
+                          fallback={p.freelancer.name}
+                          size="xs"
+                        />
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 dark:text-slate-100 truncate">
+                            {p.freelancer.name}
+                          </p>
+                          <p className="text-[11px] text-slate-400 truncate">{p.freelancer.email}</p>
+                        </div>
+                      </div>
                     </td>
 
                     <td className="px-4 py-3.5 max-w-xs">
@@ -352,9 +362,16 @@ export default function AdminProposalsPage() {
                     Submitted {new Date(selectedProposal.createdAt).toLocaleDateString()}
                   </span>
                 </div>
-                <h2 className="text-base font-extrabold text-slate-900 dark:text-white">
-                  Proposal by {selectedProposal.freelancer.name}
-                </h2>
+                <div className="flex items-center gap-2 mt-1">
+                  <Avatar
+                    src={selectedProposal.freelancer.avatarUrl}
+                    fallback={selectedProposal.freelancer.name}
+                    size="sm"
+                  />
+                  <h2 className="text-base font-extrabold text-slate-900 dark:text-white">
+                    Proposal by {selectedProposal.freelancer.name}
+                  </h2>
+                </div>
               </div>
               <button
                 onClick={() => setSelectedProposal(null)}

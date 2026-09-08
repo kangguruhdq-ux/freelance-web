@@ -223,6 +223,9 @@ router.get("/:id", authenticate, async (req: Request, res: Response): Promise<vo
         },
         milestones: {
           orderBy: { orderIndex: "asc" },
+          include: {
+            attachments: true,
+          },
         },
         job: {
           select: { id: true, title: true, description: true, category: true },
@@ -259,6 +262,9 @@ router.get("/:id", authenticate, async (req: Request, res: Response): Promise<vo
           status: "PENDING",
           orderIndex: 1,
         },
+        include: {
+          attachments: true,
+        },
       });
       contract.milestones = [defaultMilestone];
     }
@@ -277,7 +283,7 @@ router.get("/:id", authenticate, async (req: Request, res: Response): Promise<vo
         client: contract.client,
         freelancer: contract.freelancer,
         job: contract.job,
-        milestones: contract.milestones.map((m) => ({
+        milestones: contract.milestones.map((m: any) => ({
           id: m.id,
           title: m.title,
           description: m.description,
@@ -286,6 +292,14 @@ router.get("/:id", authenticate, async (req: Request, res: Response): Promise<vo
           dueDate: m.dueDate ? m.dueDate.toISOString() : null,
           submittedAt: m.submittedAt ? m.submittedAt.toISOString() : null,
           approvedAt: m.approvedAt ? m.approvedAt.toISOString() : null,
+          attachments: (m.attachments || []).map((att: any) => ({
+            id: att.id,
+            fileName: att.fileName,
+            fileUrl: att.fileUrl,
+            mimeType: att.mimeType,
+            sizeBytes: att.sizeBytes,
+            createdAt: att.createdAt,
+          })),
         })),
       },
     });

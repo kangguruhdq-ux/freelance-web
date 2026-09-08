@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { Badge } from "@/components/ui/badge";
+import { Avatar } from "@/components/ui/avatar";
 
 interface AdminSidebarProps {
   isOpen: boolean;
@@ -133,9 +134,12 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
         {/* User Info & Footer */}
         <div className="p-4 border-t border-slate-200/80 dark:border-slate-800/80 space-y-2 bg-slate-50/50 dark:bg-slate-900/50">
           <div className="flex items-center gap-3 px-2 py-1.5">
-            <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center font-bold text-xs text-slate-700 dark:text-slate-300">
-              {user?.name?.charAt(0) || "A"}
-            </div>
+            <Avatar
+              src={user?.avatarUrl}
+              fallback={user?.name || "Admin"}
+              size="sm"
+              className="ring-1 ring-slate-200 dark:ring-slate-700"
+            />
             <div className="min-w-0 flex-1">
               <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
                 {user?.name || "Administrator"}

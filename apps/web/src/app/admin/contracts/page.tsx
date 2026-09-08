@@ -12,11 +12,15 @@ import {
   DollarSign,
   Layers,
   Calendar,
+  ExternalLink,
+  Download,
+  Paperclip,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Avatar } from "@/components/ui/avatar";
 import { apiFetch } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/utils";
 
@@ -27,8 +31,8 @@ interface ContractItem {
   totalAmount: number;
   escrowBalance: number;
   status: string;
-  client: { id: string; name: string; email: string };
-  freelancer: { id: string; name: string; email: string };
+  client: { id: string; name: string; email: string; avatarUrl?: string | null };
+  freelancer: { id: string; name: string; email: string; avatarUrl?: string | null };
   milestonesCount: number;
   messagesCount: number;
   createdAt: string;
@@ -249,12 +253,26 @@ export default function AdminContractsPage() {
                     </td>
 
                     <td className="px-4 py-3.5">
-                      <p className="text-slate-800 dark:text-slate-200 font-semibold truncate">
-                        Client: {c.client.name}
-                      </p>
-                      <p className="text-slate-500 text-[11px] truncate">
-                        Talent: {c.freelancer.name}
-                      </p>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Avatar
+                          src={c.client.avatarUrl}
+                          fallback={c.client.name}
+                          size="xs"
+                        />
+                        <span className="text-slate-800 dark:text-slate-200 font-semibold truncate text-xs">
+                          {c.client.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Avatar
+                          src={c.freelancer.avatarUrl}
+                          fallback={c.freelancer.name}
+                          size="xs"
+                        />
+                        <span className="text-slate-500 text-[11px] truncate">
+                          {c.freelancer.name}
+                        </span>
+                      </div>
                     </td>
 
                     <td className="px-4 py-3.5 font-black text-slate-900 dark:text-slate-100">
@@ -387,15 +405,29 @@ export default function AdminContractsPage() {
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 uppercase font-bold">Client</span>
-                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                  {selectedContract.client?.name}
-                </p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <Avatar
+                    src={selectedContract.client?.avatarUrl}
+                    fallback={selectedContract.client?.name || "Client"}
+                    size="xs"
+                  />
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                    {selectedContract.client?.name}
+                  </p>
+                </div>
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 uppercase font-bold">Freelancer</span>
-                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                  {selectedContract.freelancer?.name}
-                </p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <Avatar
+                    src={selectedContract.freelancer?.avatarUrl}
+                    fallback={selectedContract.freelancer?.name || "Freelancer"}
+                    size="xs"
+                  />
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                    {selectedContract.freelancer?.name}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -405,29 +437,77 @@ export default function AdminContractsPage() {
                   Contract Milestones ({selectedContract.milestones.length})
                 </h3>
                 <div className="space-y-2">
-                  {selectedContract.milestones.map((m: any, idx: number) => (
-                    <div
-                      key={m.id}
-                      className="p-3 rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between text-xs"
-                    >
-                      <div>
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="font-bold text-slate-900 dark:text-white">
-                            #{idx + 1} {m.title}
+                  {selectedContract.milestones.map((m: any, idx: number) => {
+                    const urlMatch = m.description ? m.description.match(/(https?:\/\/[^\s]+)/) : null;
+                    const workUrl = urlMatch ? urlMatch[0] : null;
+
+                    return (
+                      <div
+                        key={m.id}
+                        className="p-3 rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2 text-xs"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="font-bold text-slate-900 dark:text-white">
+                              #{idx + 1} {m.title}
+                            </span>
+                            <Badge variant="outline" className="text-[10px]">
+                              {m.status}
+                            </Badge>
+                          </div>
+                          <span className="font-black text-slate-900 dark:text-white">
+                            {formatCurrency(m.amount)}
                           </span>
-                          <Badge variant="outline" className="text-[10px]">
-                            {m.status}
-                          </Badge>
                         </div>
+
                         {m.description && (
-                          <p className="text-[11px] text-slate-500">{m.description}</p>
+                          <p className="text-[11px] text-slate-500 whitespace-pre-line leading-relaxed">
+                            {m.description}
+                          </p>
+                        )}
+
+                        {/* Deliverable Project URL if submitted */}
+                        {workUrl && (
+                          <div className="pt-1">
+                            <a
+                              href={workUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/60 dark:hover:bg-brand-900/60 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800 transition"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              <span>Live Work URL: {workUrl}</span>
+                            </a>
+                          </div>
+                        )}
+
+                        {/* Deliverable Attachments if any */}
+                        {m.attachments && m.attachments.length > 0 && (
+                          <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800 space-y-1">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">
+                              Deliverable Files ({m.attachments.length})
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {m.attachments.map((att: any) => (
+                                <a
+                                  key={att.id}
+                                  href={att.fileUrl}
+                                  download={att.fileName}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[11px] text-slate-700 dark:text-slate-300 transition"
+                                >
+                                  <Paperclip className="h-3 w-3 text-brand-500" />
+                                  <span className="truncate max-w-[140px]">{att.fileName}</span>
+                                  <Download className="h-3 w-3 text-slate-400" />
+                                </a>
+                              ))}
+                            </div>
+                          </div>
                         )}
                       </div>
-                      <span className="font-black text-slate-900 dark:text-white">
-                        {formatCurrency(m.amount)}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
