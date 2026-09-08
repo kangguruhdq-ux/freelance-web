@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import prisma from "../lib/prisma";
 import { authenticate } from "../middleware/auth.middleware";
+import { createNotification } from "./notifications.routes";
 
 const router = Router();
 
@@ -105,6 +106,16 @@ router.post("/contracts/:id/reviews", authenticate, async (req: Request, res: Re
       });
 
       return newReview;
+    });
+
+    // Notify reviewee
+    await createNotification({
+      userId: revieweeId,
+      type: "REVIEW_RECEIVED",
+      title: "New Review Received",
+      message: `${req.user!.name} left a ${numRating}★ review: "${comment.trim().substring(0, 70)}"`,
+      linkUrl: `/contracts/${contractId}`,
+      metadata: { contractId, reviewerId: userId },
     });
 
     res.status(201).json({

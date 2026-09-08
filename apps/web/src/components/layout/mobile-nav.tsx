@@ -5,6 +5,7 @@ import Link from "next/link";
 import { X, ArrowRight, Briefcase, Users, Shield, Sparkles, Layers, LayoutDashboard, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar } from "@/components/ui/avatar";
 import { useAuth } from "@/context/auth-context";
 
 export interface MobileNavProps {
@@ -66,9 +67,7 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
           {isAuthenticated && user && (
             <div className="py-4 border-b border-slate-100 dark:border-slate-800 mb-2">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-sm uppercase">
-                  {user.name?.charAt(0) || "U"}
-                </div>
+                <Avatar src={user.avatarUrl} fallback={user.name} size="md" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user.name}</p>

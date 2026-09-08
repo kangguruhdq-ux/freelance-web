@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import prisma from "../lib/prisma";
 import { authenticate, requireRole } from "../middleware/auth.middleware";
 import { TransactionType, TransactionStatus } from "@prisma/client";
+import { createNotification } from "./notifications.routes";
 
 const router = Router();
 const PLATFORM_FEE_PERCENTAGE = 0.10; // 10% platform fee
@@ -69,6 +70,16 @@ router.post("/milestones/:id/fund", authenticate, requireRole("CLIENT"), async (
       });
 
       return { transaction, updatedContract, updatedMilestone };
+    });
+
+    // Notify freelancer that milestone is funded
+    await createNotification({
+      userId: milestone.contract.freelancerId,
+      type: "SYSTEM_ALERT",
+      title: `Milestone funded: ${milestone.title}`,
+      message: `${req.user!.name} funded $${milestoneAmount.toLocaleString()} into secure escrow. You may begin work.`,
+      linkUrl: `/contracts/${milestone.contractId}`,
+      metadata: { contractId: milestone.contractId, milestoneId: milestone.id },
     });
 
     res.status(200).json({
@@ -204,6 +215,16 @@ router.post("/milestones/:id/release", authenticate, requireRole("CLIENT"), asyn
       }
 
       return { releaseTx, feeTx, updatedContract, updatedMilestone };
+    });
+
+    // Notify freelancer of released payment
+    await createNotification({
+      userId: milestone.contract.freelancerId,
+      type: "PAYMENT_RELEASED",
+      title: "Escrow Payment Released!",
+      message: `${req.user!.name} released $${netFreelancerAmount.toLocaleString()} to your balance for "${milestone.title}".`,
+      linkUrl: `/contracts/${milestone.contractId}`,
+      metadata: { contractId: milestone.contractId, milestoneId: milestone.id },
     });
 
     res.status(200).json({

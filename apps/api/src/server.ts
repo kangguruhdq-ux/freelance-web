@@ -22,6 +22,7 @@ import paymentRoutes from "./routes/payments.routes";
 import reviewRoutes from "./routes/reviews.routes";
 import disputeRoutes from "./routes/disputes.routes";
 import reportRoutes from "./routes/reports.routes";
+import notificationRoutes from "./routes/notifications.routes";
 
 import { authRateLimiter } from "./middleware/rate-limit.middleware";
 
@@ -77,6 +78,7 @@ app.use("/contracts", messageRoutes);
 app.use("/milestones", milestoneRoutes);
 app.use("/payments", paymentRoutes);
 app.use("/reports", reportRoutes);
+app.use("/notifications", notificationRoutes);
 app.use("/", reviewRoutes);
 app.use("/", disputeRoutes);
 

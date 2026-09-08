@@ -15,6 +15,7 @@ export type ReportStatus = 'OPEN' | 'INVESTIGATING' | 'RESOLVED' | 'DISMISSED';
 
 // Backward compatibility alias
 export type JobType = BudgetType;
+export type AvailabilityStatus = 'AVAILABLE' | 'LIMITED' | 'UNAVAILABLE';
 
 // Public Marketplace View Types
 export interface FreelancerSummary {
@@ -30,6 +31,7 @@ export interface FreelancerSummary {
   successRate: number;
   location: string;
   available: boolean;
+  availability?: AvailabilityStatus | string;
   skills: string[];
   badge?: 'Top Rated' | 'Top Rated Plus' | 'Rising Talent';
 }
@@ -95,6 +97,7 @@ export interface AuthUser {
     hourlyRate?: number;
     rating?: number;
     completedJobs?: number;
+    availability?: string;
   } | null;
 }
 
@@ -115,6 +118,45 @@ export interface RegisterDto {
   email: string;
   password: string;
   role: 'CLIENT' | 'FREELANCER';
+}
+
+// ==========================================
+// NOTIFICATIONS & CHAT TYPES
+// ==========================================
+
+export interface NotificationItem {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  linkUrl?: string | null;
+  isRead: boolean;
+  readAt?: string | null;
+  metadata?: Record<string, any> | null;
+  createdAt: string;
+}
+
+export interface ChatAttachmentItem {
+  id?: string;
+  fileName: string;
+  fileUrl: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
+export interface ChatMessageItemData {
+  id: string;
+  content: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar?: string | null;
+  senderRole: string;
+  isSender: boolean;
+  createdAt: string;
+  attachments?: ChatAttachmentItem[];
+  pending?: boolean;
+  error?: boolean;
 }
 
 // ==========================================
@@ -180,3 +222,4 @@ export interface CreatePortfolioDto {
   githubUrl?: string;
   technologies?: string[];
 }
+

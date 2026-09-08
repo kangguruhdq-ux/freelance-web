@@ -134,7 +134,7 @@ export function FeaturedFreelancers() {
                   </span>
                   <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">/hr</span>
                 </div>
-                <Link href="/jobs">
+                <Link href={`/freelancers/${freelancer.id}`}>
                   <Button size="sm" variant="outline" className="text-xs font-semibold h-8 px-3">
                     View Profile
                   </Button>

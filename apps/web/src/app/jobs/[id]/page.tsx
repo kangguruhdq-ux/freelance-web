@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Avatar } from "@/components/ui/avatar";
 import { apiFetch } from "@/lib/api-client";
 import { FileAttachmentUpload, AttachedFile, getFileIcon, formatFileSize } from "@/components/ui/file-attachment-upload";
 
@@ -267,9 +268,17 @@ export default function JobDetailPage() {
               <p className="text-xs text-slate-400 font-medium">Proposals</p>
               <p className="text-sm font-bold text-slate-800 dark:text-slate-200 mt-0.5">{job.proposalsCount} received</p>
             </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Client Verification</p>
-              <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">Verified Client</p>
+            <div className="flex items-center gap-2">
+              <Avatar
+                src={job.client.avatarUrl}
+                fallback={job.client.name}
+                size="sm"
+                className="ring-1 ring-brand-500/20"
+              />
+              <div className="min-w-0">
+                <p className="text-xs text-slate-400 font-medium">Posted by</p>
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{job.client.name}</p>
+              </div>
             </div>
           </div>
 
@@ -321,9 +330,13 @@ export default function JobDetailPage() {
                 <Card key={p.id} className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-card dark:shadow-none space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-sm uppercase">
-                        {p.freelancer.name.charAt(0)}
-                      </div>
+                      <Avatar
+                        src={p.freelancer.avatarUrl}
+                        fallback={p.freelancer.name}
+                        size="md"
+                        status="AVAILABLE"
+                        className="ring-2 ring-emerald-500/20"
+                      />
                       <div>
                         <div className="flex items-center gap-2">
                           <Link href={`/freelancers/${p.freelancer.id}`} className="font-bold text-slate-900 dark:text-white hover:text-brand-600 dark:hover:text-brand-400 transition-colors">

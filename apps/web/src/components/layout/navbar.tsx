@@ -3,18 +3,36 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Layers, Menu, ArrowRight, LayoutDashboard, LogOut, User, Plus } from "lucide-react";
+import { Layers, Menu, ArrowRight, LayoutDashboard, LogOut, User, Plus, Camera, ChevronDown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { Avatar, AvatarStatus } from "@/components/ui/avatar";
+import { AvatarUploadModal } from "@/components/ui/avatar-upload-modal";
+import { NotificationDropdown } from "./notification-dropdown";
 import { useAuth } from "@/context/auth-context";
 import { MobileNav } from "./mobile-nav";
 
 export function Navbar() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const [avatarModalOpen, setAvatarModalOpen] = React.useState(false);
+  const [userMenuOpen, setUserMenuOpen] = React.useState(false);
   const [scrolled, setScrolled] = React.useState(false);
   const { user, isAuthenticated, logout } = useAuth();
+  const userMenuRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    if (userMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [userMenuOpen]);
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -157,6 +175,9 @@ export function Navbar() {
 
             {isAuthenticated && user ? (
               <div className="flex items-center gap-3">
+                {/* Notifications Dropdown */}
+                <NotificationDropdown />
+
                 {user.role === "CLIENT" && (
                   <Link href="/client/jobs/new">
                     <Button size="sm" className="gap-1.5 font-bold text-xs bg-brand-600 hover:bg-brand-700 text-white shadow-sm shadow-brand-500/25">
@@ -173,31 +194,104 @@ export function Navbar() {
                   </Button>
                 </Link>
 
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                  <div className="h-6 w-6 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold uppercase">
-                    {user.name?.charAt(0) || "U"}
-                  </div>
-                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 max-w-[120px] truncate">
-                    {user.name}
-                  </span>
-                  <Badge
-                    variant={getRoleBadgeVariant(user.role) as any}
-                    className="text-[10px] uppercase font-bold py-0 px-1.5"
+                {/* User Avatar & Menu Dropdown */}
+                <div className="relative inline-block" ref={userMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setUserMenuOpen((prev) => !prev)}
+                    className="flex items-center gap-2.5 p-1 pl-1.5 pr-2.5 rounded-full bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 transition-all duration-150 focus:outline-hidden"
+                    aria-expanded={userMenuOpen}
+                    aria-label="User menu"
                   >
-                    {user.role}
-                  </Badge>
-                </div>
+                    <Avatar
+                      src={user.avatarUrl}
+                      fallback={user.name}
+                      size="sm"
+                      status={
+                        user.role === "FREELANCER"
+                          ? (user.profile?.availability?.toLowerCase() as AvatarStatus) || "available"
+                          : "online"
+                      }
+                    />
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 max-w-[120px] truncate">
+                      {user.name}
+                    </span>
+                    <Badge
+                      variant={getRoleBadgeVariant(user.role) as any}
+                      className="text-[10px] uppercase font-bold py-0 px-1.5"
+                    >
+                      {user.role}
+                    </Badge>
+                    <ChevronDown className="h-3 w-3 text-slate-400" />
+                  </button>
 
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => logout()}
-                  className="text-slate-500 hover:text-rose-600 gap-1.5 px-2.5"
-                  title="Sign out"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span className="hidden md:inline text-xs">Logout</span>
-                </Button>
+                  {userMenuOpen && (
+                    <div
+                      role="menu"
+                      className="absolute right-0 mt-2 w-64 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl z-50 p-2 space-y-1 animate-in fade-in zoom-in-95 duration-150"
+                    >
+                      {/* User Info Header */}
+                      <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
+                        <Avatar
+                          src={user.avatarUrl}
+                          fallback={user.name}
+                          size="md"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{user.name}</p>
+                          <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">{user.email}</p>
+                        </div>
+                      </div>
+
+                      {/* Menu Items */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          setAvatarModalOpen(true);
+                        }}
+                        className="w-full text-left flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <Camera className="h-4 w-4 text-brand-600 dark:text-brand-400" />
+                        <span>Change Profile Photo</span>
+                      </button>
+
+                      {user.role === "FREELANCER" && (
+                        <Link
+                          href={`/freelancers/${user.id}`}
+                          onClick={() => setUserMenuOpen(false)}
+                          className="w-full text-left flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        >
+                          <User className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                          <span>View Public Profile</span>
+                        </Link>
+                      )}
+
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="w-full text-left flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <LayoutDashboard className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                        <span>Workspace Dashboard</span>
+                      </Link>
+
+                      <div className="pt-1 border-t border-slate-100 dark:border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUserMenuOpen(false);
+                            logout();
+                          }}
+                          className="w-full text-left flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span>Sign out</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <>
@@ -220,13 +314,27 @@ export function Navbar() {
           <div className="flex sm:hidden items-center gap-2">
             <ThemeToggle />
 
-            {isAuthenticated ? (
-              <Link href="/dashboard">
-                <Button size="sm" variant="outline" className="text-xs h-8 px-2.5 gap-1.5">
-                  <LayoutDashboard className="h-3.5 w-3.5 text-brand-600" />
-                  Dashboard
-                </Button>
-              </Link>
+            {isAuthenticated && user ? (
+              <>
+                <NotificationDropdown />
+                <button
+                  type="button"
+                  onClick={() => setAvatarModalOpen(true)}
+                  aria-label="Change profile photo"
+                >
+                  <Avatar
+                    src={user.avatarUrl}
+                    fallback={user.name}
+                    size="xs"
+                  />
+                </button>
+                <Link href="/dashboard">
+                  <Button size="sm" variant="outline" className="text-xs h-8 px-2.5 gap-1.5">
+                    <LayoutDashboard className="h-3.5 w-3.5 text-brand-600" />
+                    Dashboard
+                  </Button>
+                </Link>
+              </>
             ) : (
               <Link href="/register">
                 <Button size="sm" className="text-xs h-8 px-3">
@@ -250,6 +358,16 @@ export function Navbar() {
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
       />
+
+      {/* Profile Photo Upload Modal */}
+      {user && (
+        <AvatarUploadModal
+          isOpen={avatarModalOpen}
+          onClose={() => setAvatarModalOpen(false)}
+          currentAvatarUrl={user.avatarUrl}
+          userName={user.name}
+        />
+      )}
     </>
   );
 }

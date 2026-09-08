@@ -1,8 +1,36 @@
 import { Router, Request, Response } from "express";
 import prisma from "../lib/prisma";
 import { authenticate } from "../middleware/auth.middleware";
+import { createNotification } from "./notifications.routes";
 
 const router = Router({ mergeParams: true });
+
+// In-memory typing tracker: contractId -> Map of userId -> { name, avatarUrl, lastTypedAt }
+const typingState = new Map<string, Map<string, { name: string; avatarUrl: string | null; lastTypedAt: number }>>();
+
+// Helper to clean and get active typing users for a contract
+function getActiveTypingUsers(contractId: string, currentUserId: string) {
+  const contractTyping = typingState.get(contractId);
+  if (!contractTyping) return [];
+
+  const now = Date.now();
+  const active: Array<{ userId: string; name: string; avatarUrl: string | null }> = [];
+
+  for (const [uid, data] of contractTyping.entries()) {
+    // 3.5-second typing timeout
+    if (now - data.lastTypedAt > 3500) {
+      contractTyping.delete(uid);
+    } else if (uid !== currentUserId) {
+      active.push({
+        userId: uid,
+        name: data.name,
+        avatarUrl: data.avatarUrl,
+      });
+    }
+  }
+
+  return active;
+}
 
 // Helper to get or create conversation between contract participants
 async function getOrCreateContractConversation(clientId: string, freelancerId: string) {
@@ -37,6 +65,29 @@ async function getOrCreateContractConversation(clientId: string, freelancerId: s
   return conv.id;
 }
 
+// POST /contracts/:id/typing — Signal user is actively typing
+router.post("/:id/typing", authenticate, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const userId = req.user!.id;
+
+    if (!typingState.has(id)) {
+      typingState.set(id, new Map());
+    }
+
+    const contractTyping = typingState.get(id)!;
+    contractTyping.set(userId, {
+      name: req.user!.name,
+      avatarUrl: req.user!.avatarUrl || null,
+      lastTypedAt: Date.now(),
+    });
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false });
+  }
+});
+
 // GET /contracts/:id/messages — Load message history for workspace
 router.get("/:id/messages", authenticate, async (req: Request, res: Response): Promise<void> => {
   try {
@@ -44,7 +95,7 @@ router.get("/:id/messages", authenticate, async (req: Request, res: Response): P
 
     const contract = await prisma.contract.findUnique({
       where: { id },
-      select: { clientId: true, freelancerId: true },
+      select: { id: true, clientId: true, freelancerId: true },
     });
 
     if (!contract) {
@@ -74,6 +125,9 @@ router.get("/:id/messages", authenticate, async (req: Request, res: Response): P
         sender: {
           select: { id: true, name: true, avatarUrl: true, role: true },
         },
+        attachments: {
+          select: { id: true, fileName: true, fileUrl: true, mimeType: true, sizeBytes: true },
+        },
       },
     });
 
@@ -86,11 +140,15 @@ router.get("/:id/messages", authenticate, async (req: Request, res: Response): P
       senderRole: m.sender.role,
       isSender: m.senderId === userId,
       createdAt: m.createdAt.toISOString(),
+      attachments: m.attachments,
     }));
+
+    const typingUsers = getActiveTypingUsers(id, userId);
 
     res.status(200).json({
       success: true,
       data: formatted,
+      typingUsers,
     });
   } catch (error) {
     console.error("Fetch messages error:", error);
@@ -102,16 +160,19 @@ router.get("/:id/messages", authenticate, async (req: Request, res: Response): P
 router.post("/:id/messages", authenticate, async (req: Request, res: Response): Promise<void> => {
   try {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const { content } = req.body;
+    const { content, attachments } = req.body;
 
-    if (!content || typeof content !== "string" || content.trim().length === 0) {
-      res.status(400).json({ success: false, error: "Message content cannot be empty." });
+    const hasText = typeof content === "string" && content.trim().length > 0;
+    const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
+
+    if (!hasText && !hasAttachments) {
+      res.status(400).json({ success: false, error: "Message content or attachment is required." });
       return;
     }
 
     const contract = await prisma.contract.findUnique({
       where: { id },
-      select: { clientId: true, freelancerId: true },
+      select: { id: true, title: true, clientId: true, freelancerId: true },
     });
 
     if (!contract) {
@@ -138,13 +199,48 @@ router.post("/:id/messages", authenticate, async (req: Request, res: Response): 
       data: {
         conversationId,
         senderId: userId,
-        content: content.trim(),
+        content: (content || "").trim(),
+        attachments: hasAttachments
+          ? {
+              create: attachments.map((att: any) => ({
+                fileName: att.fileName || "attachment",
+                fileUrl: att.fileUrl,
+                mimeType: att.mimeType || "application/octet-stream",
+                sizeBytes: Number(att.sizeBytes) || 0,
+                uploaderId: userId,
+                contractId: contract.id,
+              })),
+            }
+          : undefined,
       },
       include: {
         sender: {
           select: { id: true, name: true, avatarUrl: true, role: true },
         },
+        attachments: {
+          select: { id: true, fileName: true, fileUrl: true, mimeType: true, sizeBytes: true },
+        },
       },
+    });
+
+    // Clear typing status for sender
+    const contractTyping = typingState.get(id);
+    if (contractTyping) {
+      contractTyping.delete(userId);
+    }
+
+    // Dispatch in-app notification to the counterparty
+    const recipientId = contract.clientId === userId ? contract.freelancerId : contract.clientId;
+    const snippet = (content || "").trim().substring(0, 70);
+    const notifText = snippet.length > 0 ? snippet : "Sent an attachment";
+
+    await createNotification({
+      userId: recipientId,
+      type: "NEW_MESSAGE",
+      title: `New message from ${req.user!.name}`,
+      message: notifText,
+      linkUrl: `/contracts/${contract.id}`,
+      metadata: { contractId: contract.id, messageId: message.id },
     });
 
     res.status(201).json({
@@ -158,6 +254,7 @@ router.post("/:id/messages", authenticate, async (req: Request, res: Response): 
         senderRole: message.sender.role,
         isSender: true,
         createdAt: message.createdAt.toISOString(),
+        attachments: message.attachments,
       },
     });
   } catch (error) {
@@ -167,3 +264,4 @@ router.post("/:id/messages", authenticate, async (req: Request, res: Response): 
 });
 
 export default router;
+

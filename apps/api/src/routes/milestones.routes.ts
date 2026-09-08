@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import prisma from "../lib/prisma";
 import { authenticate } from "../middleware/auth.middleware";
 import { MilestoneStatus } from "@prisma/client";
+import { createNotification } from "./notifications.routes";
 
 const router = Router();
 
@@ -123,6 +124,16 @@ router.post("/:id/submit", authenticate, async (req: Request, res: Response): Pr
       console.warn("Could not post deliverable message to conversation:", e);
     }
 
+    // Notify client of deliverable submission
+    await createNotification({
+      userId: milestone.contract.clientId,
+      type: "MILESTONE_SUBMITTED",
+      title: `Deliverable submitted: ${milestone.title}`,
+      message: `${req.user!.name} submitted deliverables for client review.`,
+      linkUrl: `/contracts/${milestone.contractId}`,
+      metadata: { contractId: milestone.contractId, milestoneId: milestone.id },
+    });
+
     res.status(200).json({
       success: true,
       message: "Milestone deliverables submitted for client approval.",
@@ -168,6 +179,16 @@ router.post("/:id/approve", authenticate, async (req: Request, res: Response): P
         status: "APPROVED",
         approvedAt: new Date(),
       },
+    });
+
+    // Notify freelancer of milestone approval
+    await createNotification({
+      userId: milestone.contract.freelancerId,
+      type: "MILESTONE_APPROVED",
+      title: `Milestone approved: ${milestone.title}`,
+      message: `${req.user!.name} approved your deliverable. Escrow payment ready for release.`,
+      linkUrl: `/contracts/${milestone.contractId}`,
+      metadata: { contractId: milestone.contractId, milestoneId: milestone.id },
     });
 
     res.status(200).json({

@@ -92,6 +92,7 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
         hourlyRate: Number(p.hourlyRate),
         rating: Number(p.rating),
         completedJobs: p.completedJobs,
+        availability: p.availability,
         skills: p.skills.map((s) => ({ id: s.skill.id, name: s.skill.name, slug: s.skill.slug })),
       })),
     });
@@ -210,11 +211,39 @@ router.put("/me", authenticate, async (req: Request, res: Response): Promise<voi
         headline: updated.headline,
         location: updated.location,
         hourlyRate: Number(updated.hourlyRate),
+        availability: updated.availability,
       },
     });
   } catch (error) {
     console.error("Update profile error:", error);
     res.status(500).json({ success: false, error: "Failed to update profile" });
+  }
+});
+
+// PATCH /profiles/me/availability — Quick update freelancer availability
+router.patch("/me/availability", authenticate, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { availability } = req.body;
+
+    if (!availability || typeof availability !== "string") {
+      res.status(400).json({ success: false, error: "availability is required." });
+      return;
+    }
+
+    const updated = await prisma.profile.update({
+      where: { userId },
+      data: { availability: availability.trim() },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Availability updated successfully.",
+      availability: updated.availability,
+    });
+  } catch (error) {
+    console.error("Update availability error:", error);
+    res.status(500).json({ success: false, error: "Failed to update availability" });
   }
 });
 
@@ -326,6 +355,17 @@ router.get("/:userId", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Fetch verified reviews for freelancer
+    const reviews = await prisma.review.findMany({
+      where: { revieweeId: profile.userId },
+      orderBy: { createdAt: "desc" },
+      take: 15,
+      include: {
+        reviewer: { select: { id: true, name: true, avatarUrl: true } },
+        contract: { select: { id: true, title: true } },
+      },
+    });
+
     res.status(200).json({
       success: true,
       profile: {
@@ -344,6 +384,18 @@ router.get("/:userId", async (req: Request, res: Response): Promise<void> => {
         memberSince: profile.user.createdAt.toISOString(),
         skills: profile.skills.map((s) => ({ id: s.skill.id, name: s.skill.name, slug: s.skill.slug })),
         portfolio: profile.portfolioItems,
+        reviews: reviews.map((r) => ({
+          id: r.id,
+          rating: r.rating,
+          comment: r.comment,
+          createdAt: r.createdAt.toISOString(),
+          contractTitle: r.contract?.title || "Verified Project Completion",
+          reviewer: {
+            id: r.reviewer.id,
+            name: r.reviewer.name,
+            avatarUrl: r.reviewer.avatarUrl,
+          },
+        })),
       },
     });
   } catch (error) {

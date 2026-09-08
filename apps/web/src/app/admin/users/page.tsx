@@ -18,12 +18,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Avatar } from "@/components/ui/avatar";
 import { apiFetch } from "@/lib/api-client";
 
 interface UserItem {
   id: string;
   name: string;
   email: string;
+  avatarUrl?: string | null;
   role: "CLIENT" | "FREELANCER" | "ADMIN";
   status: "ACTIVE" | "SUSPENDED" | "PENDING";
   createdAt: string;
@@ -326,9 +328,12 @@ export default function AdminUsersPage() {
                   <tr key={u.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-300 font-bold flex items-center justify-center text-xs shrink-0">
-                          {u.name.charAt(0)}
-                        </div>
+                        <Avatar
+                          src={u.avatarUrl}
+                          fallback={u.name}
+                          size="sm"
+                          className="shrink-0"
+                        />
                         <div className="min-w-0">
                           <p className="font-bold text-slate-900 dark:text-slate-100 truncate">
                             {u.name}

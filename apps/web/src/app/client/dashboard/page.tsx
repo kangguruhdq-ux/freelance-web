@@ -4,10 +4,12 @@ import * as React from "react";
 import Link from "next/link";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { useAuth } from "@/context/auth-context";
-import { Briefcase, FileText, CheckCircle2, DollarSign, Plus, Search, ShieldCheck, ArrowRight, ExternalLink, Users, Sparkles, FolderPlus } from "lucide-react";
+import { Briefcase, FileText, CheckCircle2, DollarSign, Plus, Search, ShieldCheck, ArrowRight, ExternalLink, Users, Sparkles, FolderPlus, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Avatar } from "@/components/ui/avatar";
+import { AvatarUploadModal } from "@/components/ui/avatar-upload-modal";
 import { apiFetch } from "@/lib/api-client";
 import { useRouter } from "next/navigation";
 
@@ -37,12 +39,13 @@ interface PostedJobItem {
 }
 
 export default function ClientDashboardPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const router = useRouter();
   const [contracts, setContracts] = React.useState<ContractItem[]>([]);
   const [myJobs, setMyJobs] = React.useState<PostedJobItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [jobsLoading, setJobsLoading] = React.useState(true);
+  const [avatarModalOpen, setAvatarModalOpen] = React.useState(false);
 
   // Auto redirect if user is a FREELANCER
   React.useEffect(() => {
@@ -87,21 +90,41 @@ export default function ClientDashboardPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
         {/* Welcome Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200/80 dark:border-slate-800">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Badge variant="default" className="font-semibold text-xs">
-                CLIENT PORTAL
-              </Badge>
-              <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
-                <ShieldCheck className="h-3.5 w-3.5" /> Escrow Verified
-              </span>
+          <div className="flex items-start sm:items-center gap-4">
+            <div className="relative group shrink-0">
+              <Avatar
+                src={user?.avatarUrl}
+                fallback={user?.name}
+                size="xl"
+                className="ring-4 ring-slate-100 dark:ring-slate-800 shadow-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setAvatarModalOpen(true)}
+                className="absolute inset-0 rounded-full bg-black/50 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-2xs"
+                title="Change Avatar"
+              >
+                <Camera className="h-4 w-4" />
+                <span className="text-[9px] font-bold">Edit</span>
+              </button>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Welcome back, {user?.name}
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-              {user?.email} • Manage your active job postings, contract milestones, and talent proposals
-            </p>
+
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Badge variant="default" className="font-semibold text-xs">
+                  CLIENT PORTAL
+                </Badge>
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                  <ShieldCheck className="h-3.5 w-3.5" /> Escrow Verified
+                </span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                Welcome back, {user?.name}
+              </h1>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                {user?.email} • Manage your active job postings, contract milestones, and talent proposals
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -274,17 +297,25 @@ export default function ClientDashboardPage() {
                   key={c.id}
                   className="p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-card dark:shadow-none hover:-translate-y-0.5 hover:shadow-card-hover dark:hover:shadow-glow-brand/5 hover:border-brand-300 dark:hover:border-brand-700/60 transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                 >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono font-semibold text-slate-400">{c.contractNumber}</span>
-                      <Badge variant={c.status === "ACTIVE" ? "success" : "outline"} className="text-[10px]">
-                        {c.status}
-                      </Badge>
+                  <div className="flex items-center gap-3.5">
+                    <Avatar
+                      src={c.freelancer.avatarUrl}
+                      fallback={c.freelancer.name}
+                      size="md"
+                      className="ring-2 ring-emerald-500/20"
+                    />
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono font-semibold text-slate-400">{c.contractNumber}</span>
+                        <Badge variant={c.status === "ACTIVE" ? "success" : "outline"} className="text-[10px]">
+                          {c.status}
+                        </Badge>
+                      </div>
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white">{c.title}</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Freelancer: <span className="font-semibold text-slate-700 dark:text-slate-300">{c.freelancer.name}</span> • {c.milestones?.length || 0} Milestones
+                      </p>
                     </div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">{c.title}</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Freelancer: <span className="font-semibold text-slate-700 dark:text-slate-300">{c.freelancer.name}</span> • {c.milestones?.length || 0} Milestones
-                    </p>
                   </div>
 
                   <div className="flex items-center gap-4">
@@ -304,6 +335,16 @@ export default function ClientDashboardPage() {
             </div>
           )}
         </div>
+
+        <AvatarUploadModal
+          isOpen={avatarModalOpen}
+          onClose={() => setAvatarModalOpen(false)}
+          currentAvatarUrl={user?.avatarUrl}
+          userName={user?.name}
+          onSuccess={() => {
+            refreshUser();
+          }}
+        />
       </div>
     </ProtectedRoute>
   );

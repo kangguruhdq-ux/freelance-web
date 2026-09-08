@@ -22,11 +22,17 @@ import {
   RefreshCw,
   X,
   Briefcase,
+  Paperclip,
+  ArrowDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Avatar } from "@/components/ui/avatar";
+import { ChatMessageItem, ChatMessageData, ChatAttachment } from "@/components/chat/chat-message-item";
+import { TypingIndicator } from "@/components/chat/typing-indicator";
+import { useToast } from "@/context/toast-context";
 import { apiFetch } from "@/lib/api-client";
 
 interface Milestone {
@@ -90,15 +96,19 @@ export default function ContractWorkspacePage() {
   const contractId = params?.id as string;
   const { user } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
 
   const [workspace, setWorkspace] = React.useState<ContractWorkspace | null>(null);
-  const [messages, setMessages] = React.useState<WorkspaceMessage[]>([]);
+  const [messages, setMessages] = React.useState<ChatMessageData[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [errorMsg, setErrorMsg] = React.useState("");
 
-  // Chat message input state
+  // Chat message input & attachments state
   const [newMessage, setNewMessage] = React.useState("");
+  const [chatAttachments, setChatAttachments] = React.useState<ChatAttachment[]>([]);
   const [sendingMessage, setSendingMessage] = React.useState(false);
+  const [typingUsers, setTypingUsers] = React.useState<Array<{ userId: string; name: string; avatarUrl?: string | null }>>([]);
+  const [showScrollBottom, setShowScrollBottom] = React.useState(false);
 
   // Deliverables Modal state
   const [submitModalOpen, setSubmitModalOpen] = React.useState(false);
@@ -118,9 +128,19 @@ export default function ContractWorkspacePage() {
   const [reviewSubmitted, setReviewSubmitted] = React.useState(false);
 
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const chatScrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const lastTypingPingRef = React.useRef<number>(0);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = React.useCallback((smooth = true) => {
+    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto" });
+  }, []);
+
+  const handleChatScroll = () => {
+    if (!chatScrollContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = chatScrollContainerRef.current;
+    const isAway = scrollHeight - scrollTop - clientHeight > 100;
+    setShowScrollBottom(isAway);
   };
 
   const fetchWorkspace = React.useCallback(async () => {
@@ -154,7 +174,16 @@ export default function ContractWorkspacePage() {
     try {
       const res = await apiFetch(`/contracts/${contractId}/messages`);
       if (res.success && Array.isArray(res.data)) {
-        setMessages(res.data);
+        setMessages((prev) => {
+          // Retain pending optimistic messages until server confirms
+          const pendingMessages = prev.filter((m) => m.pending);
+          const serverIds = new Set(res.data.map((m: any) => m.id));
+          const stillPending = pendingMessages.filter((p) => !serverIds.has(p.id));
+          return [...res.data, ...stillPending];
+        });
+        if (Array.isArray(res.typingUsers)) {
+          setTypingUsers(res.typingUsers);
+        }
       }
     } catch (err) {
       console.error("Failed to load messages:", err);
@@ -166,41 +195,136 @@ export default function ContractWorkspacePage() {
     fetchMessages();
   }, [fetchWorkspace, fetchMessages]);
 
-  // Periodic polling for chat messages
+  // Periodic polling for chat messages & typing status
   React.useEffect(() => {
     if (!contractId) return;
     const interval = setInterval(() => {
       fetchMessages();
-    }, 4000);
+    }, 3000);
     return () => clearInterval(interval);
   }, [contractId, fetchMessages]);
 
   React.useEffect(() => {
-    scrollToBottom();
-  }, [messages.length]);
+    if (!showScrollBottom) {
+      scrollToBottom(false);
+    }
+  }, [messages.length, scrollToBottom, showScrollBottom]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || sendingMessage) return;
+  // Handle typing activity signal
+  const handleTypingActivity = () => {
+    const now = Date.now();
+    if (now - lastTypingPingRef.current > 2500) {
+      lastTypingPingRef.current = now;
+      apiFetch(`/contracts/${contractId}/typing`, { method: "POST" }).catch(() => {});
+    }
+  };
 
-    setSendingMessage(true);
+  // Optimistic message dispatch
+  const doSendMessage = async (text: string, attachments: ChatAttachment[]) => {
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMsg: ChatMessageData = {
+      id: tempId,
+      content: text,
+      senderId: user?.id || "",
+      senderName: user?.name || "You",
+      senderAvatar: user?.avatarUrl,
+      senderRole: user?.role,
+      isSender: true,
+      createdAt: new Date().toISOString(),
+      attachments: attachments.length > 0 ? attachments : undefined,
+      pending: true,
+    };
+
+    setMessages((prev) => [...prev, optimisticMsg]);
+    setTimeout(() => scrollToBottom(true), 50);
+
     try {
       const res = await apiFetch(`/contracts/${contractId}/messages`, {
         method: "POST",
-        body: JSON.stringify({ content: newMessage.trim() }),
+        body: JSON.stringify({
+          content: text,
+          attachments: attachments.map((att) => ({
+            fileName: att.fileName,
+            fileUrl: att.fileUrl,
+            mimeType: att.mimeType,
+            sizeBytes: att.sizeBytes,
+          })),
+        }),
       });
 
-      if (res.success) {
-        setNewMessage("");
-        await fetchMessages();
-        scrollToBottom();
+      if (res.success && res.message) {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === tempId ? { ...(res.message as any), isSender: true, pending: false } : m))
+        );
       } else {
-        setStatusFeedback({ type: "error", text: res.error || "Failed to send message." });
+        setMessages((prev) =>
+          prev.map((m) => (m.id === tempId ? { ...m, pending: false, error: true } : m))
+        );
+        toast.error(res.error || "Failed to deliver message. Click retry.");
       }
-    } catch (err) {
-      console.error("Error sending message:", err);
-    } finally {
-      setSendingMessage(false);
+    } catch (err: any) {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? { ...m, pending: false, error: true } : m))
+      );
+      toast.error(err.message || "Network error. Click retry.");
+    }
+  };
+
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmed = newMessage.trim();
+    if ((!trimmed && chatAttachments.length === 0) || sendingMessage) return;
+
+    const content = trimmed;
+    const atts = [...chatAttachments];
+
+    setNewMessage("");
+    setChatAttachments([]);
+
+    await doSendMessage(content, atts);
+  };
+
+  const handleRetryMessage = async (failedMsg: ChatMessageData) => {
+    setMessages((prev) => prev.filter((m) => m.id !== failedMsg.id));
+    await doSendMessage(failedMsg.content, failedMsg.attachments || []);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    Array.from(files).forEach((file) => {
+      if (file.size > 3 * 1024 * 1024) {
+        toast.error(`"${file.name}" exceeds the 3MB size limit.`);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string;
+        setChatAttachments((prev) => [
+          ...prev,
+          {
+            id: `att-${Date.now()}-${Math.random()}`,
+            fileName: file.name,
+            fileUrl: dataUrl,
+            mimeType: file.type,
+            sizeBytes: file.size,
+          },
+        ]);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
   };
 
@@ -471,9 +595,12 @@ export default function ContractWorkspacePage() {
         {/* Participants Overview */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Card className="p-3.5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm">
-              {workspace.client.name.charAt(0)}
-            </div>
+            <Avatar
+              src={workspace.client.avatarUrl}
+              fallback={workspace.client.name}
+              size="md"
+              className="ring-2 ring-brand-500/20"
+            />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{workspace.client.name}</p>
@@ -484,9 +611,13 @@ export default function ContractWorkspacePage() {
           </Card>
 
           <Card className="p-3.5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm">
-              {workspace.freelancer.name.charAt(0)}
-            </div>
+            <Avatar
+              src={workspace.freelancer.avatarUrl}
+              fallback={workspace.freelancer.name}
+              size="md"
+              status={((workspace.freelancer as any).profile?.availability as any) || "AVAILABLE"}
+              className="ring-2 ring-emerald-500/20"
+            />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{workspace.freelancer.name}</p>
@@ -751,84 +882,158 @@ export default function ContractWorkspacePage() {
 
           {/* RIGHT COLUMN: Live Project Chat (5 cols) */}
           <div className="lg:col-span-5 sticky top-20">
-            <Card className="p-0 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-card dark:shadow-none flex flex-col h-[650px] overflow-hidden">
+            <Card className="p-0 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-card dark:shadow-none flex flex-col h-[650px] overflow-hidden relative">
               {/* Chat Header */}
-              <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-brand-600" />
+              <div className="p-3.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Avatar
+                    src={isClient ? workspace.freelancer.avatarUrl : workspace.client.avatarUrl}
+                    fallback={isClient ? workspace.freelancer.name : workspace.client.name}
+                    size="sm"
+                    status={isClient ? (((workspace.freelancer as any).profile?.availability as any) || "AVAILABLE") : undefined}
+                  />
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Live Project Chat</h3>
+                    <h3 className="text-xs font-bold text-slate-900 dark:text-white leading-tight">
+                      {isClient ? workspace.freelancer.name : workspace.client.name}
+                    </h3>
                     <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                      {isClient ? `Chatting with ${workspace.freelancer.name}` : `Chatting with ${workspace.client.name}`}
+                      {isClient ? "Freelancer" : "Project Client"} • Escrow Workspace
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px] font-bold">Online</span>
+                <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200/50 dark:border-emerald-800/50">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[9px] font-bold">Active</span>
                 </div>
               </div>
 
               {/* Message History */}
-              <div className="flex-1 p-4 overflow-y-auto space-y-3.5 bg-slate-50/30 dark:bg-slate-950/30">
+              <div
+                ref={chatScrollContainerRef}
+                onScroll={handleChatScroll}
+                className="flex-1 p-4 overflow-y-auto space-y-1 bg-slate-50/40 dark:bg-slate-950/40 scroll-smooth"
+              >
                 {messages.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 dark:text-slate-500">
                     <MessageSquare className="h-8 w-8 mb-2 opacity-40" />
                     <p className="text-xs font-semibold">No messages in this workspace yet.</p>
-                    <p className="text-[11px] mt-1 text-slate-400">
-                      Say hello or discuss milestone requirements to kickstart the project.
+                    <p className="text-[11px] mt-1 text-slate-400 max-w-xs">
+                      Say hello, share requirements, or clarify milestone deliverable expectations.
                     </p>
                   </div>
                 ) : (
-                  messages.map((m) => (
-                    <div
-                      key={m.id}
-                      className={`flex flex-col ${m.isSender ? "items-end" : "items-start"}`}
-                    >
-                      <div className="flex items-center gap-1.5 mb-1 px-1">
-                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">
-                          {m.isSender ? "You" : m.senderName}
-                        </span>
-                        <span className="text-[9px] text-slate-400 dark:text-slate-500">
-                          {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                      </div>
-                      <div
-                        className={`max-w-[85%] p-3 rounded-2xl text-xs leading-relaxed break-words whitespace-pre-line ${
-                          m.isSender
-                            ? "bg-brand-600 text-white rounded-br-none shadow-sm"
-                            : "bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 text-slate-800 dark:text-slate-100 rounded-bl-none shadow-xs"
-                        }`}
-                      >
-                        {m.content}
-                      </div>
-                    </div>
-                  ))
+                  messages.map((m, idx) => {
+                    const prev = messages[idx - 1];
+                    const next = messages[idx + 1];
+
+                    const isFirstInGroup =
+                      idx === 0 ||
+                      prev.senderId !== m.senderId ||
+                      Math.abs(new Date(m.createdAt).getTime() - new Date(prev.createdAt).getTime()) > 5 * 60 * 1000;
+
+                    const isLastInGroup =
+                      idx === messages.length - 1 ||
+                      next.senderId !== m.senderId ||
+                      Math.abs(new Date(next.createdAt).getTime() - new Date(m.createdAt).getTime()) > 5 * 60 * 1000;
+
+                    return (
+                      <ChatMessageItem
+                        key={m.id}
+                        message={m}
+                        isFirstInGroup={isFirstInGroup}
+                        isLastInGroup={isLastInGroup}
+                        onRetry={handleRetryMessage}
+                      />
+                    );
+                  })
                 )}
+
+                {/* Typing Indicator */}
+                <TypingIndicator users={typingUsers} className="mt-2" />
                 <div ref={messagesEndRef} />
               </div>
+
+              {/* Floating Scroll to Latest Button */}
+              {showScrollBottom && (
+                <button
+                  type="button"
+                  onClick={() => scrollToBottom(true)}
+                  className="absolute bottom-20 right-4 z-20 p-2 rounded-full bg-brand-600 hover:bg-brand-700 text-white shadow-lg transition-transform hover:scale-105 active:scale-95 animate-in fade-in zoom-in duration-200"
+                  title="Scroll to latest messages"
+                >
+                  <ArrowDown className="h-4 w-4" />
+                </button>
+              )}
+
+              {/* Attachment Preview Chips */}
+              {chatAttachments.length > 0 && (
+                <div className="px-3 pt-2 pb-1 bg-slate-100/90 dark:bg-slate-800/90 border-t border-slate-200/80 dark:border-slate-700 flex flex-wrap gap-1.5">
+                  {chatAttachments.map((att, i) => (
+                    <span
+                      key={att.id || i}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 shadow-2xs"
+                    >
+                      <Paperclip className="h-3 w-3 text-brand-500" />
+                      <span className="truncate max-w-[120px]">{att.fileName}</span>
+                      <button
+                        type="button"
+                        onClick={() => setChatAttachments((prev) => prev.filter((_, idx) => idx !== i))}
+                        className="hover:text-rose-500 p-0.5 rounded"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
 
               {/* Message Input Box */}
               <form
                 onSubmit={handleSendMessage}
-                className="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center gap-2"
+                className="p-2.5 border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-end gap-2"
               >
-                <Input
-                  placeholder="Type a message or discuss milestone..."
-                  className="flex-1 h-10 text-xs"
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  multiple
+                  className="hidden"
+                  accept="image/*,application/pdf,.doc,.docx,.zip,.txt"
+                />
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="h-9 w-9 p-0 text-slate-500 hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-400 shrink-0 rounded-xl"
+                  title="Attach files (max 3MB)"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+
+                <textarea
+                  rows={1}
+                  placeholder="Type a message... (Enter to send, Shift+Enter for newline)"
+                  className="flex-1 min-h-[38px] max-h-24 p-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-brand-500 resize-none leading-relaxed transition-all"
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={(e) => {
+                    setNewMessage(e.target.value);
+                    handleTypingActivity();
+                  }}
+                  onKeyDown={handleKeyDown}
                   disabled={sendingMessage}
                 />
+
                 <Button
                   type="submit"
                   size="sm"
-                  disabled={sendingMessage || !newMessage.trim()}
-                  className="gap-1.5 font-bold text-xs h-10 px-4 shrink-0 shadow-sm"
+                  disabled={sendingMessage || (!newMessage.trim() && chatAttachments.length === 0)}
+                  className="gap-1.5 font-bold text-xs h-9 px-3.5 shrink-0 shadow-xs bg-brand-600 hover:bg-brand-700 text-white rounded-xl transition-all"
                 >
                   <Send className="h-3.5 w-3.5" />
-                  Send
+                  <span className="hidden sm:inline">Send</span>
                 </Button>
               </form>
             </Card>

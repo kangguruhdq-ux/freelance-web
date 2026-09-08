@@ -76,6 +76,7 @@ export async function authenticate(
             hourlyRate: true,
             rating: true,
             completedJobs: true,
+            availability: true,
           },
         },
       },

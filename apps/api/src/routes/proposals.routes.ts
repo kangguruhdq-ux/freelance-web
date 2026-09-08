@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import prisma from "../lib/prisma";
 import { authenticate, requireRole } from "../middleware/auth.middleware";
 import { ProposalStatus } from "@prisma/client";
+import { createNotification } from "./notifications.routes";
 
 const router = Router();
 
@@ -97,6 +98,16 @@ router.post("/", authenticate, requireRole("FREELANCER"), async (req: Request, r
         data: { proposalsCount: { increment: 1 } },
       }),
     ]);
+
+    // Dispatch notification to client
+    await createNotification({
+      userId: job.clientId,
+      type: "PROPOSAL_RECEIVED",
+      title: "New Proposal Received",
+      message: `${req.user!.name} submitted a bid of $${numericBid.toLocaleString()} for "${job.title}"`,
+      linkUrl: `/jobs/${jobId}`,
+      metadata: { jobId, proposalId: proposal.id, freelancerId },
+    });
 
     res.status(201).json({
       success: true,

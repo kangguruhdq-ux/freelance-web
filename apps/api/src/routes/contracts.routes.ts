@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import prisma from "../lib/prisma";
 import { authenticate, requireRole } from "../middleware/auth.middleware";
 import { ContractStatus } from "@prisma/client";
+import { createNotification } from "./notifications.routes";
 
 const router = Router();
 
@@ -117,6 +118,16 @@ router.post("/", authenticate, requireRole("CLIENT"), async (req: Request, res: 
       });
 
       return { contract, milestone };
+    });
+
+    // Notify freelancer that proposal was accepted and contract was established
+    await createNotification({
+      userId: proposal.freelancerId,
+      type: "PROPOSAL_ACCEPTED",
+      title: "Proposal Accepted & Hired!",
+      message: `${req.user!.name} accepted your proposal for "${contractTitle}". Contract #${contractNumber} is active.`,
+      linkUrl: `/contracts/${result.contract.id}`,
+      metadata: { contractId: result.contract.id, proposalId: proposal.id },
     });
 
     res.status(201).json({
