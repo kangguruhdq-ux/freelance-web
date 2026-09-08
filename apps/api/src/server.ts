@@ -16,6 +16,8 @@ import milestoneRoutes from "./routes/milestones.routes";
 import messageRoutes from "./routes/messages.routes";
 import paymentRoutes from "./routes/payments.routes";
 import reviewRoutes from "./routes/reviews.routes";
+import disputeRoutes from "./routes/disputes.routes";
+import reportRoutes from "./routes/reports.routes";
 
 export const app = express();
 const PORT = process.env.API_PORT || 4000;
@@ -58,7 +60,10 @@ app.use("/contracts", contractRoutes);
 app.use("/contracts", messageRoutes);
 app.use("/milestones", milestoneRoutes);
 app.use("/payments", paymentRoutes);
+app.use("/reports", reportRoutes);
 app.use("/", reviewRoutes);
+app.use("/", disputeRoutes);
+
 
 
 
