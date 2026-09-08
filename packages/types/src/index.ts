@@ -1,14 +1,20 @@
-// Core Enums
+// Core Enums aligned with Prisma schema
 export type UserRole = 'CLIENT' | 'FREELANCER' | 'ADMIN';
 export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'PENDING';
-export type JobType = 'FIXED' | 'HOURLY';
+export type BudgetType = 'FIXED' | 'HOURLY';
 export type ExperienceLevel = 'ENTRY' | 'INTERMEDIATE' | 'EXPERT';
-export type JobStatus = 'DRAFT' | 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
-export type ProposalStatus = 'SUBMITTED' | 'SHORTLISTED' | 'ACCEPTED' | 'REJECTED';
-export type ContractStatus = 'PENDING' | 'ACTIVE' | 'IN_REVIEW' | 'COMPLETED' | 'CANCELLED' | 'DISPUTED';
-export type MilestoneStatus = 'PENDING' | 'IN_PROGRESS' | 'SUBMITTED' | 'REVISION' | 'APPROVED' | 'PAID';
-export type TransactionType = 'DEPOSIT' | 'ESCROW_LOCK' | 'ESCROW_RELEASE' | 'REFUND' | 'WITHDRAWAL';
-export type TransactionStatus = 'PENDING' | 'COMPLETED' | 'FAILED';
+export type LocationType = 'REMOTE' | 'ONSITE' | 'HYBRID';
+export type JobStatus = 'DRAFT' | 'OPEN' | 'IN_REVIEW' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'CLOSED';
+export type ProposalStatus = 'PENDING' | 'SHORTLISTED' | 'ACCEPTED' | 'REJECTED' | 'WITHDRAWN';
+export type ContractStatus = 'PENDING' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED' | 'DISPUTED';
+export type MilestoneStatus = 'PENDING' | 'IN_PROGRESS' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+export type TransactionType = 'DEPOSIT' | 'ESCROW_HOLD' | 'RELEASE' | 'REFUND' | 'WITHDRAWAL' | 'PLATFORM_FEE';
+export type TransactionStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
+export type DisputeStatus = 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED' | 'CLOSED';
+export type ReportStatus = 'OPEN' | 'INVESTIGATING' | 'RESOLVED' | 'DISMISSED';
+
+// Backward compatibility alias
+export type JobType = BudgetType;
 
 // Public Marketplace View Types
 export interface FreelancerSummary {
@@ -39,6 +45,7 @@ export interface JobSummary {
   experienceLevel: ExperienceLevel;
   skills: string[];
   client: {
+    id?: string;
     name: string;
     company?: string;
     rating: number;
@@ -48,6 +55,7 @@ export interface JobSummary {
   };
   proposalsCount: number;
   postedAt: string;
+  status?: JobStatus;
 }
 
 export interface TestimonialItem {
@@ -67,7 +75,7 @@ export interface CategoryItem {
   slug: string;
   description: string;
   jobCount: number;
-  icon: string;
+  icon?: string;
   popularSkills: string[];
 }
 
@@ -109,3 +117,66 @@ export interface RegisterDto {
   role: 'CLIENT' | 'FREELANCER';
 }
 
+// ==========================================
+// CHECKPOINT 4 DTOs & INTERFACES
+// ==========================================
+
+export interface CreateJobDto {
+  title: string;
+  description: string;
+  categoryId: string;
+  budget: number;
+  budgetType?: BudgetType;
+  hourlyMin?: number;
+  hourlyMax?: number;
+  experienceLevel?: ExperienceLevel;
+  locationType?: LocationType;
+  duration?: string;
+  skillIds?: string[];
+}
+
+export interface UpdateJobDto {
+  title?: string;
+  description?: string;
+  categoryId?: string;
+  budget?: number;
+  budgetType?: BudgetType;
+  hourlyMin?: number;
+  hourlyMax?: number;
+  experienceLevel?: ExperienceLevel;
+  locationType?: LocationType;
+  duration?: string;
+  status?: JobStatus;
+  skillIds?: string[];
+}
+
+export interface CreateProposalDto {
+  coverLetter: string;
+  bidAmount: number;
+  estimatedDays: number;
+}
+
+export interface UpdateProposalDto {
+  coverLetter?: string;
+  bidAmount?: number;
+  estimatedDays?: number;
+}
+
+export interface UpdateProfileDto {
+  headline?: string;
+  bio?: string;
+  location?: string;
+  hourlyRate?: number;
+  experienceLevel?: ExperienceLevel;
+  availability?: string;
+  skillIds?: string[];
+}
+
+export interface CreatePortfolioDto {
+  title: string;
+  description: string;
+  coverImage: string;
+  projectUrl?: string;
+  githubUrl?: string;
+  technologies?: string[];
+}

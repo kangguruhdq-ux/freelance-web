@@ -8,6 +8,9 @@ dotenv.config();
 import authRoutes from "./routes/auth.routes";
 import userRoutes from "./routes/user.routes";
 import adminRoutes from "./routes/admin.routes";
+import jobRoutes from "./routes/jobs.routes";
+import proposalRoutes from "./routes/proposals.routes";
+import profileRoutes from "./routes/profiles.routes";
 
 export const app = express();
 const PORT = process.env.API_PORT || 4000;
@@ -43,6 +46,10 @@ app.get("/health", (_req: Request, res: Response) => {
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
 app.use("/admin", adminRoutes);
+app.use("/jobs", jobRoutes);
+app.use("/proposals", proposalRoutes);
+app.use("/profiles", profileRoutes);
+
 
 // 404 Handler
 app.use((_req: Request, res: Response) => {
