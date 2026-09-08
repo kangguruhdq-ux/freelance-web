@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { apiFetch } from "@/lib/api-client";
 
 interface JobDetail {
   id: string;
@@ -84,13 +85,10 @@ export default function JobDetailPage() {
 
     const fetchJob = async () => {
       try {
-        const res = await fetch(`/api/jobs/${jobId}`);
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && json.job) {
-            setJob(json.job);
-            setBidAmount(String(json.job.budget));
-          }
+        const json = await apiFetch(`/jobs/${jobId}`);
+        if (json.success && json.job) {
+          setJob(json.job);
+          setBidAmount(String(json.job.budget));
         }
       } catch (err) {
         console.error("Failed to load job:", err);
@@ -108,12 +106,9 @@ export default function JobDetailPage() {
 
     const fetchProposals = async () => {
       try {
-        const res = await fetch(`/api/jobs/${jobId}/proposals`);
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && Array.isArray(json.data)) {
-            setProposals(json.data);
-          }
+        const json = await apiFetch(`/jobs/${jobId}/proposals`);
+        if (json.success && Array.isArray(json.data)) {
+          setProposals(json.data);
         }
       } catch (err) {
         console.error("Failed to load job proposals:", err);
@@ -129,9 +124,8 @@ export default function JobDetailPage() {
     setSubmitting(true);
 
     try {
-      const res = await fetch("/api/proposals", {
+      const json = await apiFetch("/proposals", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           jobId,
           bidAmount: parseFloat(bidAmount),
@@ -140,8 +134,7 @@ export default function JobDetailPage() {
         }),
       });
 
-      const json = await res.json();
-      if (!res.ok || !json.success) {
+      if (!json.success) {
         setErrorMsg(json.error || "Failed to submit proposal");
         return;
       }
@@ -178,17 +171,17 @@ export default function JobDetailPage() {
   const isFreelancer = user?.role === "FREELANCER";
 
   return (
-    <div className="min-h-screen bg-slate-50/50 py-10">
+    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 py-10">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         {/* Back Link */}
-        <Link href="/jobs" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-brand-600 transition-colors">
+        <Link href="/jobs" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
           <ArrowLeft className="h-4 w-4" />
           Back to all jobs
         </Link>
 
         {/* Job Header Card */}
-        <Card className="p-6 sm:p-8 bg-white border-slate-200 shadow-card space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-100 pb-6">
+        <Card className="p-6 sm:p-8 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-card space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-6">
             <div className="space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="default" className="text-xs font-semibold">
@@ -201,46 +194,46 @@ export default function JobDetailPage() {
                   Posted {new Date(job.createdAt).toLocaleDateString()}
                 </span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                 {job.title}
               </h1>
             </div>
 
             <div className="sm:text-right shrink-0">
               <p className="text-xs uppercase font-semibold text-slate-400">Budget</p>
-              <p className="text-3xl font-black text-slate-900">
+              <p className="text-3xl font-black text-slate-900 dark:text-white">
                 ${job.budget.toLocaleString()}
               </p>
-              <span className="text-xs font-medium text-emerald-600 flex items-center gap-1 sm:justify-end mt-0.5">
+              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1 sm:justify-end mt-0.5">
                 <ShieldCheck className="h-3.5 w-3.5" /> Escrow Backed
               </span>
             </div>
           </div>
 
           {/* Key Meta Details */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-3 bg-slate-50 rounded-xl p-4 border border-slate-100">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 border border-slate-100 dark:border-slate-800">
             <div>
               <p className="text-xs text-slate-400 font-medium">Experience Level</p>
-              <p className="text-sm font-bold text-slate-800 mt-0.5">{job.experienceLevel}</p>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-200 mt-0.5">{job.experienceLevel}</p>
             </div>
             <div>
               <p className="text-xs text-slate-400 font-medium">Location Type</p>
-              <p className="text-sm font-bold text-slate-800 mt-0.5">{job.locationType}</p>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-200 mt-0.5">{job.locationType}</p>
             </div>
             <div>
               <p className="text-xs text-slate-400 font-medium">Proposals</p>
-              <p className="text-sm font-bold text-slate-800 mt-0.5">{job.proposalsCount} received</p>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-200 mt-0.5">{job.proposalsCount} received</p>
             </div>
             <div>
               <p className="text-xs text-slate-400 font-medium">Client Verification</p>
-              <p className="text-sm font-bold text-emerald-600 mt-0.5">Verified Client</p>
+              <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">Verified Client</p>
             </div>
           </div>
 
           {/* Description */}
           <div className="space-y-3">
-            <h2 className="text-base font-bold text-slate-900">Project Overview</h2>
-            <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">Project Overview</h2>
+            <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
               {job.description}
             </div>
           </div>
@@ -253,7 +246,7 @@ export default function JobDetailPage() {
                 {job.skills.map((s) => (
                   <span
                     key={s.id}
-                    className="px-3 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium border border-slate-200"
+                    className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-medium border border-slate-200 dark:border-slate-700"
                   >
                     {s.name}
                   </span>
@@ -380,14 +373,14 @@ export default function JobDetailPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                     Cover Letter &amp; Technical Approach
                   </label>
                   <textarea
                     rows={5}
                     required
                     minLength={20}
-                    className="w-full p-3.5 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 leading-relaxed resize-y"
+                    className="w-full p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 leading-relaxed resize-y"
                     placeholder="Describe your relevant experience, proposed architecture, and how you will execute this project with milestone precision..."
                     value={coverLetter}
                     onChange={(e) => setCoverLetter(e.target.value)}
@@ -406,16 +399,16 @@ export default function JobDetailPage() {
 
         {/* Not authenticated CTA */}
         {!isAuthenticated && (
-          <Card className="p-6 bg-brand-50/50 border-brand-200 text-center space-y-3">
-            <h3 className="text-base font-bold text-slate-900">Want to bid on this project?</h3>
-            <p className="text-xs text-slate-600 max-w-md mx-auto">
+          <Card className="p-6 bg-brand-50/50 dark:bg-brand-950/20 border-brand-200 dark:border-brand-900/50 text-center space-y-3">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">Want to bid on this project?</h3>
+            <p className="text-xs text-slate-600 dark:text-slate-300 max-w-md mx-auto">
               Sign up as a freelancer to submit bids, collaborate with verified clients, and get paid securely.
             </p>
             <div className="flex justify-center gap-3 pt-1">
-              <Link href="/login">
+              <Link href={`/login?redirect=${encodeURIComponent(`/jobs/${jobId}`)}`}>
                 <Button variant="outline" size="sm">Log In</Button>
               </Link>
-              <Link href="/register">
+              <Link href={`/register?redirect=${encodeURIComponent(`/jobs/${jobId}`)}`}>
                 <Button size="sm">Sign Up Free</Button>
               </Link>
             </div>

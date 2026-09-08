@@ -29,7 +29,7 @@ export function CategoryGrid() {
             </p>
           </div>
           <Link
-            href="#jobs"
+            href="/jobs"
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:text-brand-700 transition-colors"
           >
             Browse all categories
@@ -43,8 +43,9 @@ export function CategoryGrid() {
             const IconComponent = iconMap[cat.icon as keyof typeof iconMap] || Code2;
 
             return (
-              <div
+              <Link
                 key={cat.id}
+                href={`/jobs?category=${cat.slug}`}
                 className="group relative p-6 rounded-2xl border border-slate-200/80 bg-white hover:border-brand-200 hover:shadow-card-hover transition-all duration-200 flex flex-col justify-between"
               >
                 <div>
@@ -77,7 +78,7 @@ export function CategoryGrid() {
                     ))}
                   </div>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>

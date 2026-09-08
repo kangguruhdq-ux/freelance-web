@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Search, Sparkles, ArrowRight, ShieldCheck, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -15,12 +16,15 @@ const POPULAR_TAGS = [
 ];
 
 export function Hero() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState("");
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      window.location.href = `#jobs?q=${encodeURIComponent(searchQuery)}`;
+      router.push(`/jobs?search=${encodeURIComponent(searchQuery.trim())}`);
+    } else {
+      router.push("/jobs");
     }
   };
 
@@ -92,14 +96,14 @@ export function Hero() {
 
           {/* Action CTAs */}
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3.5">
-            <Link href="/register" className="w-full sm:w-auto">
+            <Link href="/jobs" className="w-full sm:w-auto">
               <Button size="lg" className="w-full sm:w-auto px-7 font-semibold">
-                Find Talent
+                Explore Projects
               </Button>
             </Link>
-            <Link href="#jobs" className="w-full sm:w-auto">
+            <Link href="/client/jobs/new" className="w-full sm:w-auto">
               <Button variant="outline" size="lg" className="w-full sm:w-auto px-7 font-semibold">
-                Find Work
+                Post a Project
               </Button>
             </Link>
           </div>

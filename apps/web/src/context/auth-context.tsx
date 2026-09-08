@@ -26,9 +26,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUser = React.useCallback(async () => {
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (typeof window !== "undefined") {
+        const token = localStorage.getItem("fh_token");
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+      }
+
       const res = await fetch(`${API_BASE}/auth/me`, {
         method: "GET",
-        headers: { "Content-Type": "application/json" },
+        headers,
         cache: "no-store",
       });
 

@@ -50,6 +50,57 @@ router.get("/meta/skills", async (_req: Request, res: Response): Promise<void> =
   }
 });
 
+// GET /profiles — Public freelancers directory
+router.get("/", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { search, take = "12" } = req.query;
+    const limit = Math.min(50, Math.max(1, parseInt(take as string, 10) || 12));
+
+    const where: any = {
+      user: { role: "FREELANCER", status: "ACTIVE" },
+    };
+
+    if (search) {
+      const q = (search as string).trim();
+      where.OR = [
+        { headline: { contains: q, mode: "insensitive" } },
+        { bio: { contains: q, mode: "insensitive" } },
+        { user: { name: { contains: q, mode: "insensitive" } } },
+      ];
+    }
+
+    const profiles = await prisma.profile.findMany({
+      where,
+      take: limit,
+      orderBy: { rating: "desc" },
+      include: {
+        user: { select: { id: true, name: true, avatarUrl: true, role: true } },
+        skills: { include: { skill: true } },
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      data: profiles.map((p) => ({
+        id: p.id,
+        userId: p.userId,
+        name: p.user.name,
+        avatarUrl: p.user.avatarUrl,
+        headline: p.headline,
+        bio: p.bio,
+        location: p.location,
+        hourlyRate: Number(p.hourlyRate),
+        rating: Number(p.rating),
+        completedJobs: p.completedJobs,
+        skills: p.skills.map((s) => ({ id: s.skill.id, name: s.skill.name, slug: s.skill.slug })),
+      })),
+    });
+  } catch (error) {
+    console.error("List profiles error:", error);
+    res.status(500).json({ success: false, error: "Failed to list freelancer profiles" });
+  }
+});
+
 // GET /profiles/me — Get current user's profile
 router.get("/me", authenticate, async (req: Request, res: Response): Promise<void> => {
   try {
@@ -244,8 +295,13 @@ router.get("/:userId", async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId;
 
-    const profile = await prisma.profile.findUnique({
-      where: { userId },
+    const profile = await prisma.profile.findFirst({
+      where: {
+        OR: [
+          { userId },
+          { id: userId },
+        ],
+      },
       include: {
         user: {
           select: {

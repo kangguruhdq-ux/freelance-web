@@ -75,30 +75,30 @@ export default function FreelancerProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 py-10">
+    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 py-10">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        <Link href="/#freelancers" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-brand-600 transition-colors">
+        <Link href="/jobs" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
           <ArrowLeft className="h-4 w-4" />
           Back to marketplace
         </Link>
 
         {/* Profile Card */}
-        <Card className="p-6 sm:p-8 bg-white border-slate-200 shadow-card space-y-6">
-          <div className="flex flex-col sm:flex-row items-start justify-between gap-6 pb-6 border-b border-slate-100">
+        <Card className="p-6 sm:p-8 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-card space-y-6">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-6 pb-6 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-start gap-5">
               <div className="h-20 w-20 rounded-2xl bg-brand-600 text-white flex items-center justify-center text-3xl font-extrabold shadow-sm">
                 {profile.name.charAt(0)}
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                     {profile.name}
                   </h1>
-                  <Badge variant="secondary" className="font-bold text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
+                  <Badge variant="secondary" className="font-bold text-xs bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">
                     TOP RATED
                   </Badge>
                 </div>
-                <p className="text-base font-semibold text-brand-600">{profile.headline}</p>
+                <p className="text-base font-semibold text-brand-600 dark:text-brand-400">{profile.headline}</p>
                 <div className="flex items-center gap-4 text-xs text-slate-500 pt-1">
                   <span className="flex items-center gap-1">
                     <MapPin className="h-3.5 w-3.5 text-slate-400" />

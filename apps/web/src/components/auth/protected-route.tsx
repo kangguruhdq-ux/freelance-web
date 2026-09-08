@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { UserRole } from "@freelancehub/types";
 import { useAuth } from "@/context/auth-context";
 import { ShieldAlert, ArrowLeft, Loader2 } from "lucide-react";
@@ -15,12 +15,14 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { user, role, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   React.useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push("/login");
+      const redirectUrl = pathname ? `/login?redirect=${encodeURIComponent(pathname)}` : "/login";
+      router.push(redirectUrl);
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, router, pathname]);
 
   if (isLoading) {
     return (

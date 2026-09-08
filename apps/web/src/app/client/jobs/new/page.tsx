@@ -8,6 +8,7 @@ import { ArrowLeft, Briefcase, Plus, ShieldCheck, CheckCircle2 } from "lucide-re
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { apiFetch } from "@/lib/api-client";
 
 interface CategoryOption {
   id: string;
@@ -30,8 +31,7 @@ export default function NewJobPage() {
   const [errorMsg, setErrorMsg] = React.useState("");
 
   React.useEffect(() => {
-    fetch("/api/profiles/meta/categories")
-      .then((res) => res.json())
+    apiFetch("/profiles/meta/categories")
       .then((data) => {
         if (data.success && Array.isArray(data.data) && data.data.length > 0) {
           setCategories(data.data);
@@ -47,9 +47,8 @@ export default function NewJobPage() {
     setSubmitting(true);
 
     try {
-      const res = await fetch("/api/jobs", {
+      const json = await apiFetch("/jobs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
           description,
@@ -62,8 +61,7 @@ export default function NewJobPage() {
         }),
       });
 
-      const json = await res.json();
-      if (!res.ok || !json.success) {
+      if (!json.success) {
         setErrorMsg(json.error || "Failed to post job");
         return;
       }

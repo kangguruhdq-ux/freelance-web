@@ -24,10 +24,10 @@ export function FeaturedFreelancers() {
             </p>
           </div>
           <Link
-            href="/register"
+            href="/jobs"
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:text-brand-700 transition-colors"
           >
-            Explore all talent
+            Explore marketplace talent
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
@@ -134,7 +134,7 @@ export function FeaturedFreelancers() {
                   </span>
                   <span className="text-xs text-slate-500 font-normal">/hr</span>
                 </div>
-                <Link href="/register">
+                <Link href="/jobs">
                   <Button size="sm" variant="outline" className="text-xs font-semibold h-8 px-3">
                     View Profile
                   </Button>

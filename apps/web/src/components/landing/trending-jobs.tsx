@@ -24,10 +24,10 @@ export function TrendingJobs() {
             </p>
           </div>
           <Link
-            href="/register"
+            href="/jobs"
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:text-brand-700 transition-colors"
           >
-            Explore all 2,400+ jobs
+            Explore all marketplace jobs
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
@@ -57,9 +57,11 @@ export function TrendingJobs() {
                 </div>
 
                 {/* Job Title */}
-                <h3 className="text-lg font-bold text-slate-900 group-hover:text-brand-600 transition-colors leading-snug">
-                  {job.title}
-                </h3>
+                <Link href="/jobs">
+                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-brand-600 transition-colors leading-snug">
+                    {job.title}
+                  </h3>
+                </Link>
 
                 {/* Budget */}
                 <div className="mt-2.5 flex items-baseline gap-1 text-slate-900">
@@ -109,7 +111,7 @@ export function TrendingJobs() {
                   </div>
                 </div>
 
-                <Link href="/register">
+                <Link href="/jobs">
                   <Button size="sm" className="font-semibold text-xs h-9 px-4">
                     View Job
                   </Button>

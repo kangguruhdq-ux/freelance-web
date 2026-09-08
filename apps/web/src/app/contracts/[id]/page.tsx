@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { apiFetch } from "@/lib/api-client";
 
 interface Milestone {
   id: string;
@@ -101,18 +102,17 @@ export default function ContractWorkspacePage() {
   const fetchWorkspace = React.useCallback(async () => {
     if (!contractId) return;
     try {
-      const res = await fetch(`/api/contracts/${contractId}`);
-      if (!res.ok) {
+      const res = await apiFetch(`/contracts/${contractId}`);
+      if (!res.success) {
         if (res.status === 403) {
           setErrorMsg("Forbidden: You are not an authorized participant in this project workspace.");
         } else {
-          setErrorMsg("Contract not found.");
+          setErrorMsg(res.error || "Contract not found.");
         }
         return;
       }
-      const json = await res.json();
-      if (json.success && json.contract) {
-        setWorkspace(json.contract);
+      if (res.contract) {
+        setWorkspace(res.contract);
       }
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to load workspace.");
@@ -124,12 +124,9 @@ export default function ContractWorkspacePage() {
   const fetchMessages = React.useCallback(async () => {
     if (!contractId) return;
     try {
-      const res = await fetch(`/api/contracts/${contractId}/messages`);
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && Array.isArray(json.data)) {
-          setMessages(json.data);
-        }
+      const res = await apiFetch(`/contracts/${contractId}/messages`);
+      if (res.success && Array.isArray(res.data)) {
+        setMessages(res.data);
       }
     } catch (err) {
       console.error("Failed to load messages:", err);
@@ -147,13 +144,12 @@ export default function ContractWorkspacePage() {
 
     setSendingMessage(true);
     try {
-      const res = await fetch(`/api/contracts/${contractId}/messages`, {
+      const res = await apiFetch(`/contracts/${contractId}/messages`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: newMessage }),
       });
 
-      if (res.ok) {
+      if (res.success) {
         setNewMessage("");
         await fetchMessages();
       }
@@ -168,15 +164,14 @@ export default function ContractWorkspacePage() {
     setActionLoading(true);
     setStatusFeedback(null);
     try {
-      const res = await fetch(`/api/milestones/${milestoneId}/${action}`, {
+      const res = await apiFetch(`/milestones/${milestoneId}/${action}`, {
         method: "POST",
       });
-      const json = await res.json();
-      if (res.ok && json.success) {
-        setStatusFeedback(json.message);
+      if (res.success) {
+        setStatusFeedback(res.message || "Milestone status updated successfully.");
         await fetchWorkspace();
       } else {
-        setStatusFeedback(json.error || "Action failed.");
+        setStatusFeedback(res.error || "Action failed.");
       }
     } catch (err: any) {
       setStatusFeedback(err.message || "Network error.");
@@ -210,84 +205,84 @@ export default function ContractWorkspacePage() {
   const isFreelancer = user?.id === workspace.freelancer.id;
 
   return (
-    <div className="min-h-screen bg-slate-50/50 py-8">
+    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         {/* Navigation & Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link
               href={isClient ? "/client/dashboard" : "/freelancer/dashboard"}
-              className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 transition-colors"
+              className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-semibold text-slate-500">
+                <span className="text-xs font-mono font-semibold text-slate-500 dark:text-slate-400">
                   {workspace.contractNumber}
                 </span>
                 <Badge variant={workspace.status === "ACTIVE" ? "success" : "secondary"}>
                   {workspace.status}
                 </Badge>
               </div>
-              <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+              <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                 {workspace.title}
               </h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-4 bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
             <div className="text-right">
               <p className="text-[11px] font-semibold uppercase text-slate-400">Total Contract Value</p>
-              <p className="text-xl font-black text-slate-900">${workspace.totalAmount.toLocaleString()}</p>
+              <p className="text-xl font-black text-slate-900 dark:text-white">${workspace.totalAmount.toLocaleString()}</p>
             </div>
-            <span className="h-8 w-px bg-slate-200" />
+            <span className="h-8 w-px bg-slate-200 dark:bg-slate-800" />
             <div className="text-right">
-              <p className="text-[11px] font-semibold uppercase text-emerald-600 flex items-center gap-1">
+              <p className="text-[11px] font-semibold uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                 <ShieldCheck className="h-3.5 w-3.5" /> Escrow Protected
               </p>
-              <p className="text-xl font-black text-emerald-600">${workspace.totalAmount.toLocaleString()}</p>
+              <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">${workspace.totalAmount.toLocaleString()}</p>
             </div>
           </div>
         </div>
 
         {/* Participants Card */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="p-4 bg-white border-slate-200 flex items-center gap-3">
+          <Card className="p-4 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-sm uppercase">
               {workspace.client.name.charAt(0)}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <p className="text-sm font-bold text-slate-900 truncate">{workspace.client.name}</p>
+                <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{workspace.client.name}</p>
                 <Badge variant="default" className="text-[10px] py-0 px-1.5 font-bold">CLIENT</Badge>
               </div>
               <p className="text-xs text-slate-500 truncate">{workspace.client.email}</p>
             </div>
           </Card>
 
-          <Card className="p-4 bg-white border-slate-200 flex items-center gap-3">
+          <Card className="p-4 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm uppercase">
               {workspace.freelancer.name.charAt(0)}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <p className="text-sm font-bold text-slate-900 truncate">{workspace.freelancer.name}</p>
+                <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{workspace.freelancer.name}</p>
                 <Badge variant="secondary" className="text-[10px] py-0 px-1.5 font-bold">FREELANCER</Badge>
               </div>
-              <p className="text-xs text-slate-500 truncate">{workspace.freelancer.email}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{workspace.freelancer.email}</p>
             </div>
           </Card>
         </div>
 
         {/* Workspace Navigation Tabs */}
-        <div className="flex items-center gap-2 border-b border-slate-200">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800">
           <button
             onClick={() => setActiveTab("milestones")}
             className={`px-4 py-2.5 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${
               activeTab === "milestones"
-                ? "border-brand-600 text-brand-600"
-                : "border-transparent text-slate-500 hover:text-slate-800"
+                ? "border-brand-600 text-brand-600 dark:text-brand-400"
+                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
             }`}
           >
             <CheckCircle2 className="h-4 w-4" />
@@ -298,8 +293,8 @@ export default function ContractWorkspacePage() {
             onClick={() => setActiveTab("messages")}
             className={`px-4 py-2.5 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${
               activeTab === "messages"
-                ? "border-brand-600 text-brand-600"
-                : "border-transparent text-slate-500 hover:text-slate-800"
+                ? "border-brand-600 text-brand-600 dark:text-brand-400"
+                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
             }`}
           >
             <MessageSquare className="h-4 w-4" />
@@ -310,8 +305,8 @@ export default function ContractWorkspacePage() {
             onClick={() => setActiveTab("overview")}
             className={`px-4 py-2.5 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${
               activeTab === "overview"
-                ? "border-brand-600 text-brand-600"
-                : "border-transparent text-slate-500 hover:text-slate-800"
+                ? "border-brand-600 text-brand-600 dark:text-brand-400"
+                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
             }`}
           >
             <FileText className="h-4 w-4" />
