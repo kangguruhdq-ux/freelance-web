@@ -70,3 +70,42 @@ export interface CategoryItem {
   icon: string;
   popularSkills: string[];
 }
+
+// Authentication & Session Types
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  status: UserStatus;
+  avatarUrl?: string | null;
+  createdAt?: string;
+  profile?: {
+    headline?: string;
+    bio?: string;
+    location?: string;
+    hourlyRate?: number;
+    rating?: number;
+    completedJobs?: number;
+  } | null;
+}
+
+export interface AuthResponse {
+  success: boolean;
+  message?: string;
+  user?: AuthUser;
+  token?: string;
+}
+
+export interface LoginDto {
+  email: string;
+  password: string;
+}
+
+export interface RegisterDto {
+  name: string;
+  email: string;
+  password: string;
+  role: 'CLIENT' | 'FREELANCER';
+}
+

@@ -2,8 +2,10 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { X, ArrowRight, Briefcase, Users, Shield, Sparkles, Layers } from "lucide-react";
+import { X, ArrowRight, Briefcase, Users, Shield, Sparkles, Layers, LayoutDashboard, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/context/auth-context";
 
 export interface MobileNavProps {
   isOpen: boolean;
@@ -11,6 +13,8 @@ export interface MobileNavProps {
 }
 
 export function MobileNav({ isOpen, onClose }: MobileNavProps) {
+  const { user, isAuthenticated, logout } = useAuth();
+
   // Prevent background scrolling when mobile menu is active
   React.useEffect(() => {
     if (isOpen) {
@@ -58,13 +62,33 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
             </button>
           </div>
 
+          {/* User Profile Info (if authenticated) */}
+          {isAuthenticated && user && (
+            <div className="py-4 border-b border-slate-100 mb-2">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-sm uppercase">
+                  {user.name?.charAt(0) || "U"}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-slate-900 truncate">{user.name}</p>
+                    <Badge variant="outline" className="text-[10px] font-bold px-1.5 py-0 uppercase">
+                      {user.role}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-slate-500 truncate">{user.email}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Navigation Links */}
-          <div className="py-6 space-y-1">
+          <div className="py-4 space-y-1">
             <p className="px-3 text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
               Marketplace
             </p>
             <Link
-              href="#jobs"
+              href="/#jobs"
               onClick={onClose}
               className="flex items-center gap-3 px-3 py-3 rounded-lg text-base font-medium text-slate-700 hover:text-brand-600 hover:bg-brand-50/50 transition-colors"
             >
@@ -72,7 +96,7 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
               Find Work
             </Link>
             <Link
-              href="#freelancers"
+              href="/#freelancers"
               onClick={onClose}
               className="flex items-center gap-3 px-3 py-3 rounded-lg text-base font-medium text-slate-700 hover:text-brand-600 hover:bg-brand-50/50 transition-colors"
             >
@@ -80,7 +104,7 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
               Find Talent
             </Link>
             <Link
-              href="#how-it-works"
+              href="/#how-it-works"
               onClick={onClose}
               className="flex items-center gap-3 px-3 py-3 rounded-lg text-base font-medium text-slate-700 hover:text-brand-600 hover:bg-brand-50/50 transition-colors"
             >
@@ -88,7 +112,7 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
               How It Works
             </Link>
             <Link
-              href="#security"
+              href="/#security"
               onClick={onClose}
               className="flex items-center gap-3 px-3 py-3 rounded-lg text-base font-medium text-slate-700 hover:text-brand-600 hover:bg-brand-50/50 transition-colors"
             >
@@ -110,17 +134,41 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
 
         {/* Footer Actions */}
         <div className="pt-6 border-t border-slate-100 space-y-3">
-          <Link href="/login" onClick={onClose} className="w-full block">
-            <Button variant="outline" className="w-full h-11 justify-center text-sm font-medium">
-              Log in
-            </Button>
-          </Link>
-          <Link href="/register" onClick={onClose} className="w-full block">
-            <Button className="w-full h-11 justify-center text-sm font-semibold gap-2">
-              Sign up free
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
+          {isAuthenticated ? (
+            <>
+              <Link href="/dashboard" onClick={onClose} className="w-full block">
+                <Button className="w-full h-11 justify-center text-sm font-semibold gap-2">
+                  <LayoutDashboard className="h-4 w-4" />
+                  Go to Dashboard
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  logout();
+                  onClose();
+                }}
+                className="w-full h-11 justify-center text-sm font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 gap-2 border-rose-200"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </Button>
+            </>
+          ) : (
+            <>
+              <Link href="/login" onClick={onClose} className="w-full block">
+                <Button variant="outline" className="w-full h-11 justify-center text-sm font-medium">
+                  Log in
+                </Button>
+              </Link>
+              <Link href="/register" onClick={onClose} className="w-full block">
+                <Button className="w-full h-11 justify-center text-sm font-semibold gap-2">
+                  Sign up free
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </div>
