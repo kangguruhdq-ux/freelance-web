@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import prisma from "../lib/prisma";
 import { authenticate } from "../middleware/auth.middleware";
 import { createNotification } from "./notifications.routes";
+import { encodeDbText, decodeDbText } from "../lib/db-safe";
 
 const router = Router();
 
@@ -19,8 +20,8 @@ router.post("/contracts/:id/reviews", authenticate, async (req: Request, res: Re
     }
 
     // Validate comment
-    if (!comment || typeof comment !== "string" || comment.trim().length < 10) {
-      res.status(400).json({ success: false, error: "Review comment must be at least 10 characters." });
+    if (!comment || typeof comment !== "string" || comment.trim().length < 1) {
+      res.status(400).json({ success: false, error: "Please enter a review comment." });
       return;
     }
 
@@ -84,7 +85,7 @@ router.post("/contracts/:id/reviews", authenticate, async (req: Request, res: Re
           reviewerId: userId,
           revieweeId,
           rating: numRating,
-          comment: comment.trim(),
+          comment: encodeDbText(comment.trim()),
         },
       });
 
@@ -113,7 +114,7 @@ router.post("/contracts/:id/reviews", authenticate, async (req: Request, res: Re
       userId: revieweeId,
       type: "REVIEW_RECEIVED",
       title: "New Review Received",
-      message: `${req.user!.name} left a ${numRating}★ review: "${comment.trim().substring(0, 70)}"`,
+      message: encodeDbText(`${req.user!.name} left a ${numRating}-star review: "${comment.trim().substring(0, 70)}"`),
       linkUrl: `/contracts/${contractId}`,
       metadata: { contractId, reviewerId: userId },
     });
@@ -124,7 +125,7 @@ router.post("/contracts/:id/reviews", authenticate, async (req: Request, res: Re
       review: {
         id: review.id,
         rating: review.rating,
-        comment: review.comment,
+        comment: decodeDbText(review.comment),
         createdAt: review.createdAt.toISOString(),
       },
     });
@@ -151,7 +152,9 @@ router.get("/contracts/:id/reviews", authenticate, async (req: Request, res: Res
       data: reviews.map((r) => ({
         id: r.id,
         rating: r.rating,
-        comment: r.comment,
+        comment: decodeDbText(r.comment),
+        reviewerId: r.reviewerId,
+        revieweeId: r.revieweeId,
         reviewer: r.reviewer,
         createdAt: r.createdAt.toISOString(),
       })),

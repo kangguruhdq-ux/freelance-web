@@ -162,6 +162,8 @@ export default function ContractWorkspacePage() {
   const [reviewComment, setReviewComment] = React.useState("");
   const [reviewSubmitting, setReviewSubmitting] = React.useState(false);
   const [reviewSubmitted, setReviewSubmitted] = React.useState(false);
+  const [reviewError, setReviewError] = React.useState<string | null>(null);
+  const [contractReviews, setContractReviews] = React.useState<any[]>([]);
 
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const chatScrollContainerRef = React.useRef<HTMLDivElement>(null);
@@ -229,10 +231,31 @@ export default function ContractWorkspacePage() {
     }
   }, [contractId]);
 
+  const fetchContractReviews = React.useCallback(async () => {
+    if (!contractId) return;
+    try {
+      const res = await apiFetch(`/contracts/${contractId}/reviews`);
+      if (res.success && Array.isArray(res.data)) {
+        setContractReviews(res.data);
+        if (user?.id) {
+          const myReview = res.data.find((r: any) => r.reviewerId === user.id);
+          if (myReview) {
+            setReviewSubmitted(true);
+            setReviewRating(myReview.rating);
+            setReviewComment(myReview.comment);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to load contract reviews:", err);
+    }
+  }, [contractId, user?.id]);
+
   React.useEffect(() => {
     fetchWorkspace();
     fetchMessages();
-  }, [fetchWorkspace, fetchMessages]);
+    fetchContractReviews();
+  }, [fetchWorkspace, fetchMessages, fetchContractReviews]);
 
   // Periodic polling for chat messages & typing status
   React.useEffect(() => {
@@ -603,23 +626,29 @@ export default function ContractWorkspacePage() {
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reviewComment || reviewComment.length < 10) {
-      setStatusFeedback({ type: "error", text: "Please enter a review comment of at least 10 characters." });
+    setReviewError(null);
+    const trimmed = reviewComment.trim();
+    if (!trimmed) {
+      setReviewError("Please write a review comment before submitting.");
       return;
     }
     setReviewSubmitting(true);
     try {
       const res = await apiFetch(`/contracts/${contractId}/reviews`, {
         method: "POST",
-        body: JSON.stringify({ rating: reviewRating, comment: reviewComment }),
+        body: JSON.stringify({ rating: reviewRating, comment: trimmed }),
       });
       if (res.success) {
         setReviewSubmitted(true);
         setStatusFeedback({ type: "success", text: "Verified review submitted successfully! Thank you." });
+        await fetchContractReviews();
+        await fetchWorkspace();
       } else {
+        setReviewError(res.error || "Failed to submit review.");
         setStatusFeedback({ type: "error", text: res.error || "Failed to submit review." });
       }
     } catch (err: any) {
+      setReviewError(err.message || "Failed to submit review.");
       setStatusFeedback({ type: "error", text: err.message || "Failed to submit review." });
     } finally {
       setReviewSubmitting(false);
@@ -1058,8 +1087,10 @@ export default function ContractWorkspacePage() {
             {/* Verified Review Section when COMPLETED */}
             {workspace.status === "COMPLETED" && (
               <Card className="p-6 bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 shadow-card dark:shadow-none space-y-4">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-emerald-100 dark:bg-emerald-900/60 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
                   <div>
                     <h3 className="text-base font-bold text-slate-900 dark:text-white">
                       Project Successfully Completed &amp; Escrow Released
@@ -1095,28 +1126,130 @@ export default function ContractWorkspacePage() {
                       <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{reviewRating} / 5</span>
                     </div>
 
+                    {/* Quick Review Presets */}
+                    <div className="space-y-1.5">
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Quick feedback presets (click to select):</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          "Outstanding work and timely delivery! 🚀",
+                          "Great communication and top quality code! 👍",
+                          "Highly recommended freelancer! ⭐",
+                          "Professional and very responsive!",
+                        ].map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => {
+                              setReviewComment(preset);
+                              if (reviewError) setReviewError(null);
+                            }}
+                            className="px-2.5 py-1 text-[11px] font-medium rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition cursor-pointer"
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     <div>
                       <Input
                         placeholder="Write a verified review comment (e.g. Excellent communication and top quality deliverable)..."
                         value={reviewComment}
-                        onChange={(e) => setReviewComment(e.target.value)}
-                        className="text-xs h-10"
+                        onChange={(e) => {
+                          setReviewComment(e.target.value);
+                          if (reviewError) setReviewError(null);
+                        }}
+                        className={`text-xs h-10 ${reviewError ? "border-rose-400 ring-1 ring-rose-400" : ""}`}
                       />
                     </div>
+
+                    {/* Inline error feedback */}
+                    {reviewError && (
+                      <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 shrink-0" />
+                        <span>{reviewError}</span>
+                      </div>
+                    )}
 
                     <Button
                       type="submit"
                       size="sm"
                       disabled={reviewSubmitting}
-                      className="font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                      className="gap-1.5 font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm cursor-pointer"
                     >
-                      {reviewSubmitting ? "Submitting..." : "Submit Verified Review"}
+                      {reviewSubmitting ? (
+                        <>
+                          <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Submitting Review...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-4 w-4" />
+                          Submit Verified Review
+                        </>
+                      )}
                     </Button>
                   </form>
                 ) : (
-                  <p className="text-xs text-emerald-700 dark:text-emerald-300 font-semibold flex items-center gap-1.5">
-                    <CheckCircle2 className="h-4 w-4" /> Your verified review has been published on the platform.
-                  </p>
+                  <div className="space-y-3">
+                    <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-emerald-200/80 dark:border-emerald-800/80 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                          <span>Your Verified Platform Review</span>
+                        </p>
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`h-4 w-4 ${
+                                star <= reviewRating
+                                  ? "text-amber-400 fill-amber-400"
+                                  : "text-slate-200 dark:text-slate-700"
+                              }`}
+                            />
+                          ))}
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">
+                            {reviewRating} / 5
+                          </span>
+                        </div>
+                      </div>
+                      {reviewComment && (
+                        <p className="text-xs text-slate-700 dark:text-slate-300 italic bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800">
+                          &ldquo;{reviewComment}&rdquo;
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Show counterparty reviews if available */}
+                    {contractReviews.filter((r) => r.reviewerId !== user?.id).map((r) => (
+                      <div key={r.id} className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            Review from {r.reviewer?.name || "Counterparty"}
+                          </p>
+                          <div className="flex items-center gap-0.5">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`h-3.5 w-3.5 ${
+                                  star <= r.rating
+                                    ? "text-amber-400 fill-amber-400"
+                                    : "text-slate-200 dark:text-slate-700"
+                                }`}
+                              />
+                            ))}
+                            <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 ml-1">
+                              {r.rating} / 5
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 italic">
+                          &ldquo;{r.comment}&rdquo;
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </Card>
             )}
